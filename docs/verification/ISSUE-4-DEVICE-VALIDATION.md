@@ -88,6 +88,8 @@ The user reported locking the phone, invoking **Undo a step in Daily Rhythm** th
 
 The first tool query after the user reported completion returned `passcodeRequired: false` and `unlockedSinceBoot: true`; the app could then be launched normally. **Authentication state during the action itself is unverified.** The reported locked-screen interaction is recorded, but it is not treated as conclusive proof that the action executed while authentication remained locked; Face ID may have unlocked the device before the query.
 
+The user then restarted the physical phone and reported that Siri could not run before entering the initial password; they also observed a SIM PIN prompt. **The pre-unlock attempt was blocked by the system, by user report.** No app invocation or storage access before first unlock is claimed, and post-reboot persistence was not inspected before the user ended this validation round and requested the next roadmap item.
+
 ## Device matrix
 
 Each row requires an actual result. `Pending` means no pass is claimed. Tests involving corrupt files must use disposable test data, preserve an exact backup, and restore it after the check.
@@ -104,7 +106,7 @@ Each row requires an actual result. `Pending` means no pass is claimed. Tests in
 | Stale widget / archive | Keep an old widget entry, archive its habit in the app, then invoke the old button; reject unavailable work without changing another item. | Pending |
 | Midnight | Invoke an occurrence captured before the date boundary after the boundary; preserve its exact identity and never complete tomorrow's item. | Pending |
 | Locked after first unlock | Lock the iPhone after a successful unlock; exercise a widget/Shortcut and record saved data or an honest system/app rejection. | **Partial:** user reports successful Siri Undo while on the locked phone; app subsequently shows the selected 10 pages item pending. The post-action lock query says passcode not required, so authentication state during execution remains unverified. |
-| Before first unlock after restart | Before first unlock, attempt the action if the OS permits it; record protection/system denial and verify data survives the first unlock. | Pending |
+| Before first unlock after restart | Before first unlock, attempt the action if the OS permits it; record protection/system denial and verify data survives the first unlock. | **System-blocked, user-observed:** after restarting, Siri was unavailable before the initial password; a SIM PIN prompt was also reported. No app execution before unlock or post-reboot storage verification is claimed. |
 | Missing App Group | On an isolated misconfigured test build, show an honest storage failure and no alternate store; reinstall the correctly signed build and recover the original records. | **Pass for observed runtime failure/recovery:** the signed negative fixture shows an access error without an empty-store flow; reinstalling the original build recovers both completed targets at 2/2. Raw byte identity was not measured. |
 | Concurrent app / extension | Trigger overlapping app/widget writes and compare final IDs, outcomes and timestamps; no lost distinct writes or duplicate record. | Pending |
 | Corrupt / unsupported storage | In the disposable fixture, inject malformed JSON and then a future version; read/write attempts must fail without overwriting either file; restore the backup and verify recovery. | Pending |
@@ -130,4 +132,4 @@ Temporary build logs are under `/tmp/daily-rhythm-issue-4/`. Keep raw account/de
 
 ## Closure
 
-All four issue acceptance criteria remain open until the relevant device rows are demonstrated. Use `Refs #4` while any required check remains pending or blocked.
+The user ended this validation round and requested the next roadmap item. The same-name selection fix and observed results are reviewable in PR #33; issue #4 remains open for the unperformed device checks above. No isolated corruption/stale-date fixture was built or run in this round. Use `Refs #4`; do not present the remaining criteria as passed. Issue #5 depends on #3 and can proceed independently of those remaining #4 checks.
