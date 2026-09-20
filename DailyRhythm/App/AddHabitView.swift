@@ -53,7 +53,11 @@ struct AddHabitView: View {
             .modifier(FormSaveError(message: $saveError))
             .task {
                 guard generation == nil else { return }
-                do { generation = try SharedRoutineStore.makeStore().validateAccess() }
+                do {
+                    let store = try SharedRoutineStore.makeStore()
+                    generation = try store.validateAccess()
+                    store.recordPilotSetupStarted()
+                }
                 catch { saveError = error.localizedDescription }
             }
         }

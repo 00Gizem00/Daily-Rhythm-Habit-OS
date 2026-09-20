@@ -27,11 +27,19 @@ enum SharedRoutineStore {
     }
 }
 
-enum SharedStoreError: LocalizedError {
+enum SharedStoreError: LocalizedError, PilotCategorizedError {
     case missingConfiguration
     case unavailableContainer
     case staleOccurrence
     case noSmallStep
+
+    var pilotFailureCategory: PilotFailureCategory {
+        switch self {
+        case .missingConfiguration, .unavailableContainer: .storage
+        case .staleOccurrence: .staleAction
+        case .noSmallStep: .validation
+        }
+    }
 
     var errorDescription: String? {
         switch self {

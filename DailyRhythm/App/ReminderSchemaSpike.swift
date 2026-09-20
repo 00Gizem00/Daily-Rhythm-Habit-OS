@@ -178,16 +178,19 @@ struct CreateRhythmSchemaReminder {
     var section: RhythmReminderSection?
 
     func perform() async throws -> some IntentResult & ReturnsValue<RhythmSchemaReminder> {
-        guard list == nil || list?.id == RhythmReminderList.appList.id else { throw ReminderMappingError.unsupportedItem }
-        guard note == nil, isFlagged != true, images.isEmpty, tags.isEmpty, urls.isEmpty,
-              locationTrigger == nil, section == nil else { throw ReminderMappingError.unsupportedFields }
-        let now = Date()
-        let definition = try ReminderSchemaMapping.definition(title: title, dueDate: dueDate,
-                                                               hasRecurrence: recurrence != nil, now: now)
         let store = try SharedRoutineStore.makeStore()
-        let habit = try store.addHabit(definition, now: now)
-        guard case .once(let key) = habit.recurrence else { throw ReminderMappingError.unsupportedItem }
-        let step = try store.occurrence(id: "\(habit.id.uuidString)|\(key)")
+        let (habit, step) = try store.diagnoseAction(surface: .appIntent) {
+            guard list == nil || list?.id == RhythmReminderList.appList.id else { throw ReminderMappingError.unsupportedItem }
+            guard note == nil, isFlagged != true, images.isEmpty, tags.isEmpty, urls.isEmpty,
+                  locationTrigger == nil, section == nil else { throw ReminderMappingError.unsupportedFields }
+            let now = Date()
+            let definition = try ReminderSchemaMapping.definition(title: title, dueDate: dueDate,
+                                                                   hasRecurrence: recurrence != nil, now: now)
+            let habit = try store.addHabit(definition, now: now)
+            guard case .once(let key) = habit.recurrence else { throw ReminderMappingError.unsupportedItem }
+            let step = try store.occurrence(id: "\(habit.id.uuidString)|\(key)")
+            return (habit, step)
+        }
         RhythmSurfaceRefresh.reload()
         await RhythmNotifications.reconcileAfterMutation()
         await ReminderSchemaIndex.shared.refreshAfterMutation()
@@ -216,23 +219,26 @@ struct UpdateRhythmSchemaReminder {
     var locationTrigger: RhythmReminderLocation?
 
     func perform() async throws -> some IntentResult & ReturnsValue<RhythmSchemaReminder> {
-        guard let isCompleted, title == nil, note == nil, tags == nil, urls == nil,
-              dueDate == nil, recurrence == nil, isFlagged == nil, list == nil, locationTrigger == nil
-        else { throw ReminderMappingError.unsupportedUpdate }
         let store = try SharedRoutineStore.makeStore()
-        let step = try store.occurrence(id: target.id)
-        guard try store.habits().contains(where: { $0.id == step.habitID && !$0.recurrence.isRecurring })
-        else { throw ReminderMappingError.unsupportedItem }
-        if isCompleted {
-            guard step.outcome != .skipped else { throw RoutineStoreError.completedOccurrence }
-            try store.complete(occurrenceID: step.id, source: .appIntent, expectedRevision: step.revision)
-        } else {
-            try store.reopen(occurrenceID: step.id, expectedRevision: step.revision)
+        let savedStep = try store.diagnoseAction(surface: .appIntent) {
+            guard let isCompleted, title == nil, note == nil, tags == nil, urls == nil,
+                  dueDate == nil, recurrence == nil, isFlagged == nil, list == nil, locationTrigger == nil
+            else { throw ReminderMappingError.unsupportedUpdate }
+            let step = try store.occurrence(id: target.id)
+            guard try store.habits().contains(where: { $0.id == step.habitID && !$0.recurrence.isRecurring })
+            else { throw ReminderMappingError.unsupportedItem }
+            if isCompleted {
+                guard step.outcome != .skipped else { throw RoutineStoreError.completedOccurrence }
+                try store.complete(occurrenceID: step.id, source: .appIntent, expectedRevision: step.revision)
+            } else {
+                try store.reopen(occurrenceID: step.id, expectedRevision: step.revision)
+            }
+            return try store.occurrence(id: step.id)
         }
         RhythmSurfaceRefresh.reload()
         await RhythmNotifications.reconcileAfterMutation()
         await ReminderSchemaIndex.shared.refreshAfterMutation()
-        return .result(value: RhythmSchemaReminder(try store.occurrence(id: step.id)))
+        return .result(value: RhythmSchemaReminder(savedStep))
     }
 }
 #endif

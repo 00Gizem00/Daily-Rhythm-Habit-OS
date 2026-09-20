@@ -108,17 +108,21 @@ struct CompleteControlHabitIntent: AppIntent {
     init(habit: RhythmHabitEntity?) { self.habit = habit }
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        guard let habit else { throw ControlConfigurationError.chooseHabit }
         defer { RhythmSurfaceRefresh.reload() }
-        let saved = try SharedRoutineStore.makeStore().completeCurrentHabit(habitID: habit.id)
+        let store = try SharedRoutineStore.makeStore()
+        let saved = try store.diagnoseAction(surface: .appIntent) {
+            guard let habit else { throw ControlConfigurationError.chooseHabit }
+            return try store.completeCurrentHabit(habitID: habit.id)
+        }
         await RhythmNotifications.reconcileAfterMutation()
         let outcome = saved.outcome == .light ? "light" : "full"
         return .result(dialog: "\(saved.title): today's \(outcome) step is recorded.")
     }
 }
 
-private enum ControlConfigurationError: LocalizedError {
+private enum ControlConfigurationError: LocalizedError, PilotCategorizedError {
     case chooseHabit
+    var pilotFailureCategory: PilotFailureCategory { .validation }
     var errorDescription: String? { "Choose a habit in this control's settings before using it." }
 }
 

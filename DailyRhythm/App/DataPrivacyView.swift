@@ -24,6 +24,8 @@ final class DataPrivacyModel: ObservableObject {
     @Published var notice: String?
     @Published var share: RoutineExportShare?
     @Published var restorePreview: RoutineRestorePreview?
+    @Published private(set) var diagnostics: PilotDiagnosticsStatus?
+    @Published private(set) var diagnosticsError: String?
     private var stagedExportURL: URL?
     private let exportDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("DailyRhythmExports", isDirectory: true)
 
@@ -36,6 +38,34 @@ final class DataPrivacyModel: ObservableObject {
     func refresh() {
         do { erasurePending = try SharedRoutineStore.makeStore().dataLifecycle().erasurePending }
         catch { self.error = error.localizedDescription }
+        refreshDiagnostics()
+    }
+
+    private func refreshDiagnostics() {
+        do {
+            diagnostics = try SharedRoutineStore.makeStore().pilotDiagnosticsStatus()
+            diagnosticsError = nil
+        } catch { diagnostics = nil; diagnosticsError = error.localizedDescription }
+    }
+
+    func setDiagnosticsEnabled(_ enabled: Bool) {
+        guard !busy, share == nil else { return }
+        do { try SharedRoutineStore.makeStore().setPilotDiagnosticsEnabled(enabled); refreshDiagnostics() }
+        catch { diagnosticsError = error.localizedDescription }
+    }
+
+    func exportDiagnostics() {
+        guard !busy, share == nil else { return }
+        error = nil
+        do {
+            try FileManager.default.createDirectory(at: exportDirectory, withIntermediateDirectories: true)
+            let url = exportDirectory.appendingPathComponent("DailyRhythm-Diagnostics-\(UUID().uuidString).json")
+            do { try SharedRoutineStore.makeStore().writePilotDiagnosticsExport(to: url) }
+            catch { try? removeIfPresent(url); throw error }
+            stagedExportURL = url
+            share = RoutineExportShare(url: url)
+        } catch { self.error = "Diagnostics export couldn't be prepared: \(error.localizedDescription)" }
+        refreshDiagnostics()
     }
 
     func export(_ format: RoutineExportFormat) {
@@ -157,7 +187,7 @@ struct DataPrivacyView: View {
     var body: some View {
         Form {
             Section("Your data stays local") {
-                Text("Your plans and history are stored on this device in storage shared with Daily Rhythm widgets and Shortcuts. There is no account, analytics tracker or cloud sync in this build. Device backups are controlled by your iOS settings.")
+                Text("Your plans and history are stored on this device in storage shared with Daily Rhythm widgets and Shortcuts. There is no account, remote analytics tracker or cloud sync in this build. Device backups are controlled by your iOS settings.")
                 Text("AI planning is not enabled in this build. Any future optional cloud AI feature will explain what is sent before use; cloud processing is not entirely on-device. Manual tracking and export remain available without AI or Pro.")
             }
             Section("Export your data") {
@@ -167,6 +197,29 @@ struct DataPrivacyView: View {
                     .font(.footnote).foregroundStyle(.secondary)
                 Text("You choose where to save or share. Spreadsheet formula-like text is prefixed with an apostrophe in CSV; JSON preserves the original text.")
                     .font(.footnote).foregroundStyle(.secondary)
+            }.disabled(privacy.erasurePending)
+            Section("Optional local diagnostics") {
+                Toggle("Observe a 30-day pilot", isOn: Binding(
+                    get: { privacy.diagnostics?.enabled == true },
+                    set: { privacy.setDiagnosticsEnabled($0) }
+                ))
+                .disabled(privacy.diagnosticsError != nil)
+                Text("Off by default. Records daily first-completion counts, known input surfaces, setup timing when available, and action failure categories. Repeating or reopening the same step does not add another completion. This is separate from your current progress and history.")
+                    .font(.footnote).foregroundStyle(.secondary)
+                Text("No habit names, goals or prompts are recorded. Local step keys prevent double-counting and are excluded from exports. Nothing is uploaded automatically. App Intents includes Siri, Shortcuts and controls; their exact invocation method is unknown.")
+                    .font(.footnote).foregroundStyle(.secondary)
+                if let day = privacy.diagnostics?.observationDay { Text("Observation day \(day) of 30") }
+                if privacy.diagnostics?.capacityReached == true {
+                    Text("The diagnostic limit was reached. Exported counts may be incomplete; habit tracking is unaffected.")
+                }
+                Button("Export diagnostics JSON", systemImage: "square.and.arrow.up") { privacy.exportDiagnostics() }
+                    .disabled(privacy.diagnostics?.enabled != true)
+                Text("Export supports day-7 and day-14 review and contains aggregate counts only. Optional diagnostic writes can be missed after an interruption or storage error. Turning observation off deletes its local records. Records expire after 30 days and are removed on the next app or diagnostics access; saved exports remain yours.")
+                    .font(.footnote).foregroundStyle(.secondary)
+                if let error = privacy.diagnosticsError {
+                    Text(error)
+                    Button("Turn off and clear diagnostics", role: .destructive) { privacy.setDiagnosticsEnabled(false) }
+                }
             }.disabled(privacy.erasurePending)
             Section("Restore a JSON backup") {
                 Button("Choose JSON backup", systemImage: "square.and.arrow.down") { choosingBackup = true }
@@ -181,7 +234,7 @@ struct DataPrivacyView: View {
                     do { eraseGeneration = try SharedRoutineStore.makeStore().dataLifecycle().generation }
                     catch { privacy.error = error.localizedDescription }
                 }
-                Text("Removes plans, recorded history, archived data, migration backups, setup drafts, reminder preferences, app-owned notifications, search entries and local test reports. This cannot be undone. Export first if you want a copy.")
+                Text("Removes plans, recorded history, archived data, migration backups, setup drafts, reminder preferences, app-owned notifications, search entries, pilot diagnostics and local test reports. This cannot be undone. Export first if you want a copy.")
                     .font(.footnote).foregroundStyle(.secondary)
                 Text("Copies you saved or shared elsewhere are not removed. iOS controls widget refresh timing. A small recovery marker and empty coordination lock files remain to reject old actions.")
                     .font(.footnote).foregroundStyle(.secondary)

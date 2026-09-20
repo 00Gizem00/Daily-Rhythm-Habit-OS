@@ -25,7 +25,10 @@ final class OnboardingPreferences: ObservableObject {
         }
     }
 
-    func begin() { update { $0.status = .inProgress } }
+    func begin() {
+        (try? SharedRoutineStore.makeStore())?.recordPilotSetupStarted()
+        update { $0.status = .inProgress }
+    }
     func pause() { update { if $0.status != .finished { $0.status = .skipped } } }
     func finish() { update { $0.status = .finished; $0.draft = nil } }
     func choose(_ template: OnboardingTemplate) {
