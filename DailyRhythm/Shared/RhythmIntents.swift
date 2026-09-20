@@ -64,7 +64,7 @@ struct CreateHabitIntent: AppIntent {
             dayPart: timeOfDay.coreValue,
             weekdays: repeatPattern.calendarWeekdays
         )
-        WidgetCenter.shared.reloadTimelines(ofKind: SharedRoutineStore.widgetKind)
+        RhythmSurfaceRefresh.reload()
         return .result(dialog: "Your habit is ready in Daily Rhythm.")
     }
 }
@@ -97,6 +97,7 @@ struct CompleteWidgetOccurrenceIntent: AppIntent {
     static let title: LocalizedStringResource = "Complete Widget Step"
     static let isDiscoverable = false
     static let openAppWhenRun = false
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresLocalDeviceAuthentication
 
     @Parameter(title: "Daily Step") var occurrence: RhythmOccurrenceEntity
     @Parameter(title: "Use Small Step", default: false) var useSmallStep: Bool
@@ -119,16 +120,15 @@ struct CompleteWidgetOccurrenceIntent: AppIntent {
 }
 
 private func completeStep(occurrence: RhythmOccurrenceEntity, useSmallStep: Bool, source: CompletionSource, expectedRevision: String? = nil) throws {
+    defer { RhythmSurfaceRefresh.reload() }
     let store = try SharedRoutineStore.makeStore()
     let now = Date()
     let agenda = try store.agenda(at: now)
     guard let current = agenda.occurrences.first(where: { $0.id == occurrence.id }) else {
-        WidgetCenter.shared.reloadTimelines(ofKind: SharedRoutineStore.widgetKind)
         throw SharedStoreError.staleOccurrence
     }
     if source == .widget {
         guard let expectedRevision, expectedRevision == current.revision, current.isReady(at: now) else {
-            WidgetCenter.shared.reloadTimelines(ofKind: SharedRoutineStore.widgetKind)
             throw SharedStoreError.staleOccurrence
         }
     }
@@ -136,14 +136,14 @@ private func completeStep(occurrence: RhythmOccurrenceEntity, useSmallStep: Bool
     guard !useSmallStep || current.lightTarget != nil else {
         throw SharedStoreError.noSmallStep
     }
-    try store.complete(
-        occurrenceID: current.id,
-        outcome: useSmallStep ? .light : .full,
-        source: source,
-        expectedRevision: expectedRevision ?? current.revision,
-        now: now
-    )
-    WidgetCenter.shared.reloadTimelines(ofKind: SharedRoutineStore.widgetKind)
+    if source == .widget {
+        // Recheck the entire shown snapshot and agenda membership under the write lock.
+        _ = try store.perform(.complete(useSmallStep ? .light : .full), on: current,
+                              source: .widget, requiringAgenda: true, now: now)
+    } else {
+        try store.complete(occurrenceID: current.id, outcome: useSmallStep ? .light : .full,
+                           source: source, expectedRevision: current.revision, now: now)
+    }
 }
 
 struct ReopenOccurrenceIntent: AppIntent {
@@ -161,11 +161,11 @@ struct ReopenOccurrenceIntent: AppIntent {
         let store = try SharedRoutineStore.makeStore()
         let agenda = try store.agenda()
         guard let current = agenda.occurrences.first(where: { $0.id == occurrence.id }) else {
-            WidgetCenter.shared.reloadTimelines(ofKind: SharedRoutineStore.widgetKind)
+            RhythmSurfaceRefresh.reload()
             throw SharedStoreError.staleOccurrence
         }
         try store.reopen(occurrenceID: occurrence.id, expectedRevision: current.revision)
-        WidgetCenter.shared.reloadTimelines(ofKind: SharedRoutineStore.widgetKind)
+        RhythmSurfaceRefresh.reload()
         return .result(dialog: "Your step is ready to record again.")
     }
 }

@@ -17,6 +17,20 @@ struct SetupHelpView: View {
                     .font(.subheadline).foregroundStyle(.secondary)
                 Link("Apple's widget guide", destination: URL(string: "https://support.apple.com/guide/iphone/iphb8f1bf206/ios")!)
             }
+            Section("Lock Screen & StandBy") {
+                Text("Touch and hold your unlocked Lock Screen, choose Customize, then Lock Screen. Tap the widget area and add Daily Rhythm for compact progress.")
+                Text("For StandBy, turn on Settings → StandBy, connect your iPhone to power, rest it sideways and press the side button. Swipe to the widget view; touch and hold a widget to add Daily Rhythm.")
+                Text("StandBy uses the small widget. iOS manages its layout, privacy and refresh timing. You may need to unlock before recording a step. Always-on display depends on your iPhone and settings.")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                Link("Apple's StandBy guide", destination: URL(string: "https://support.apple.com/guide/iphone/iph878d77632/ios")!)
+            }
+            Section("Add a control") {
+                Text("Open Control Center, touch and hold an empty area, then tap Add a Control. Search for Daily Rhythm and choose Open Today or Complete Habit. Edit Complete Habit to choose a specific habit.")
+                Text("Complete Habit records the full target of that habit's step planned for today. It keeps an existing full or light result. A skipped, postponed or unscheduled step needs review in the app; the control never switches to another habit. Light Day does not change this full-step control.")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                Text("You can also choose these controls while customizing Lock Screen buttons. On an iPhone with an Action button, open Settings → Action Button → Controls and choose a control. Device authentication may be required.")
+                Link("Apple's Control Center guide", destination: URL(string: "https://support.apple.com/guide/iphone/iph59095ec58/ios")!)
+            }
             Section("Try an App Shortcut") {
                 Text("In Shortcuts, open App Shortcuts and choose Daily Rhythm. Try Create Habit, Complete Step or Undo Step. You'll be asked to choose a specific step when needed.")
                 ShortcutsLink()

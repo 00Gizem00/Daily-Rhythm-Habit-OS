@@ -12,6 +12,11 @@
     <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
     <key>DailyRhythmAppGroup</key><string>$(APP_GROUP_IDENTIFIER)</string>
     <key>LSRequiresIPhoneOS</key><true/>
+    <key>CFBundleURLTypes</key>
+    <array><dict>
+        <key>CFBundleURLName</key><string>com.lumetechllc.DailyRhythm.today</string>
+        <key>CFBundleURLSchemes</key><array><string>daily-rhythm</string></array>
+    </dict></array>
     <key>UIApplicationSceneManifest</key>
     <dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>
     <key>UILaunchScreen</key><dict/>
@@ -26,4 +31,3 @@
     </array>
 </dict>
 </plist>
-

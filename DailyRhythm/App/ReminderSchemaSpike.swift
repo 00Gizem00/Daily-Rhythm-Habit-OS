@@ -188,7 +188,7 @@ struct CreateRhythmSchemaReminder {
         let habit = try store.addHabit(definition, now: now)
         guard case .once(let key) = habit.recurrence else { throw ReminderMappingError.unsupportedItem }
         let step = try store.occurrence(id: "\(habit.id.uuidString)|\(key)")
-        WidgetCenter.shared.reloadTimelines(ofKind: SharedRoutineStore.widgetKind)
+        RhythmSurfaceRefresh.reload()
         return .result(value: RhythmSchemaReminder(step, createdAt: habit.createdAt))
     }
 }
@@ -227,7 +227,7 @@ struct UpdateRhythmSchemaReminder {
         } else {
             try store.reopen(occurrenceID: step.id, expectedRevision: step.revision)
         }
-        WidgetCenter.shared.reloadTimelines(ofKind: SharedRoutineStore.widgetKind)
+        RhythmSurfaceRefresh.reload()
         return .result(value: RhythmSchemaReminder(try store.occurrence(id: step.id)))
     }
 }

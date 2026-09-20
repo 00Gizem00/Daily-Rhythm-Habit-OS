@@ -17,6 +17,7 @@ struct DailyRhythmApp: App {
 }
 
 private struct RhythmRootView: View {
+    @ObservedObject private var navigation = RhythmNavigation.shared
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var setup: OnboardingPreferences
     @State private var checkedFirstRun = false
@@ -24,13 +25,25 @@ private struct RhythmRootView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        TabView {
+        TabView(selection: $navigation.selectedTab) {
             NavigationStack { TodayView() }
+                .id(navigation.todayRoute)
                 .tabItem { Label("Today", systemImage: "sun.max") }
+                .tag(0)
             NavigationStack { HabitsView() }
                 .tabItem { Label("Habits", systemImage: "square.stack.3d.up") }
+                .tag(1)
             NavigationStack { HistoryView() }
                 .tabItem { Label("History", systemImage: "chart.bar.xaxis") }
+                .tag(2)
+        }
+        .onOpenURL { url in
+            guard url == RhythmSurfaceRefresh.todayURL else { return }
+            navigation.openToday()
+        }
+        .onChange(of: navigation.todayRoute) { _, _ in
+            showingSetup = false
+            model.refresh()
         }
         .sheet(isPresented: $showingSetup) { OnboardingView() }
         .onChange(of: model.refreshedAt, initial: true) { _, _ in

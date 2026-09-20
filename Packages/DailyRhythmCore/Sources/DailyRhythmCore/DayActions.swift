@@ -28,6 +28,24 @@ public struct DailyAgenda: Equatable, Sendable {
         occurrences.first { $0.isReady(at: now, calendar: calendar) }
     }
 
+    /// Known widget transitions, including civil midnight without a foreground app.
+    /// Timed due dates can become eligible at a different timezone's midnight.
+    public func widgetRefreshDates(after now: Date, calendar: Calendar = .current) -> [Date] {
+        guard let midnight = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) else { return [] }
+        var dates: Set<Date> = [midnight]
+        for item in occurrences where !item.isResolved {
+            var candidates = [Date]()
+            if let deferred = item.deferredUntil { candidates.append(deferred) }
+            if case .timed(let due, let zone) = item.due, let timeZone = TimeZone(identifier: zone) {
+                var dueCalendar = Calendar(identifier: .gregorian)
+                dueCalendar.timeZone = timeZone
+                candidates.append(dueCalendar.startOfDay(for: due))
+            }
+            dates.formUnion(candidates.filter { $0 > now && $0 < midnight })
+        }
+        return dates.sorted()
+    }
+
     /// Timed deadlines use their absolute instant. Date-only items use the due date
     /// and 09:00/14:00/19:00 as ordering anchors only, never as invented due times.
     /// Equal anchors are ordered by day part then the stable occurrence ID.

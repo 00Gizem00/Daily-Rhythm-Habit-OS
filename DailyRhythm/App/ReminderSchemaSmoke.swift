@@ -75,7 +75,7 @@ enum ReminderSchemaSmoke {
 
             // Reversible cleanup through the normal API, scoped to this newly created test item.
             try store.archive(habitID: created.habitID)
-            WidgetCenter.shared.reloadTimelines(ofKind: SharedRoutineStore.widgetKind)
+            RhythmSurfaceRefresh.reload()
             report["testItemArchived"] = true
             let oldIDs = Set(before.map(\.id))
             guard try store.habits(includeArchived: true).filter({ oldIDs.contains($0.id) }) == before,
@@ -88,7 +88,7 @@ enum ReminderSchemaSmoke {
             if let testHabitID {
                 do {
                     try SharedRoutineStore.makeStore().archive(habitID: testHabitID)
-                    WidgetCenter.shared.reloadTimelines(ofKind: SharedRoutineStore.widgetKind)
+                    RhythmSurfaceRefresh.reload()
                     report["testItemArchived"] = true
                 }
                 catch { report["cleanupError"] = error.localizedDescription }
