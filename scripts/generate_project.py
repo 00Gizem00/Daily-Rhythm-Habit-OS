@@ -72,6 +72,25 @@ def generate():
     common = {
         "APP_GROUP_IDENTIFIER": "group.com.lumetechllc.DailyRhythm",
         "CLANG_ENABLE_MODULES": "YES",
+        "CLANG_ENABLE_OBJC_WEAK": "YES",
+        "CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING": "YES",
+        "CLANG_WARN_BOOL_CONVERSION": "YES",
+        "CLANG_WARN_COMMA": "YES",
+        "CLANG_WARN_CONSTANT_CONVERSION": "YES",
+        "CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS": "YES",
+        "CLANG_WARN_EMPTY_BODY": "YES",
+        "CLANG_WARN_ENUM_CONVERSION": "YES",
+        "CLANG_WARN_INFINITE_RECURSION": "YES",
+        "CLANG_WARN_INT_CONVERSION": "YES",
+        "CLANG_WARN_NON_LITERAL_NULL_CONVERSION": "YES",
+        "CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF": "YES",
+        "CLANG_WARN_OBJC_LITERAL_CONVERSION": "YES",
+        "CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER": "YES",
+        "CLANG_WARN_RANGE_LOOP_ANALYSIS": "YES",
+        "CLANG_WARN_STRICT_PROTOTYPES": "YES",
+        "CLANG_WARN_SUSPICIOUS_MOVE": "YES",
+        "CLANG_WARN_UNREACHABLE_CODE": "YES",
+        "CLANG_WARN__DUPLICATE_METHOD_MATCH": "YES",
         "CODE_SIGN_STYLE": "Automatic",
         "CURRENT_PROJECT_VERSION": "1",
         "IPHONEOS_DEPLOYMENT_TARGET": "18.0",
@@ -81,6 +100,15 @@ def generate():
         "SWIFT_STRICT_CONCURRENCY": "complete",
         "TARGETED_DEVICE_FAMILY": "1,2",
         "ENABLE_USER_SCRIPT_SANDBOXING": "YES",
+        "ENABLE_STRICT_OBJC_MSGSEND": "YES",
+        "GCC_NO_COMMON_BLOCKS": "YES",
+        "GCC_WARN_64_TO_32_BIT_CONVERSION": "YES",
+        "GCC_WARN_ABOUT_RETURN_TYPE": "YES",
+        "GCC_WARN_UNDECLARED_SELECTOR": "YES",
+        "GCC_WARN_UNINITIALIZED_AUTOS": "YES",
+        "GCC_WARN_UNUSED_FUNCTION": "YES",
+        "GCC_WARN_UNUSED_VARIABLE": "YES",
+        "STRING_CATALOG_GENERATE_SYMBOLS": "YES",
     }
 
     def configs(name, settings):
@@ -89,6 +117,13 @@ def generate():
             values = dict(settings)
             values["SWIFT_OPTIMIZATION_LEVEL"] = "-Onone" if configuration == "Debug" else "-O"
             values["DEBUG_INFORMATION_FORMAT"] = "dwarf" if configuration == "Debug" else "dwarf-with-dsym"
+            if name == "project":
+                # Match SwiftPM's active-architecture Debug builds. Otherwise a
+                # selected arm64 Simulator can make the app/widget ask for an
+                # x86_64 dependency slice that the package did not build.
+                values["ONLY_ACTIVE_ARCH"] = "YES" if configuration == "Debug" else "NO"
+                if configuration == "Release":
+                    values["SWIFT_COMPILATION_MODE"] = "wholemodule"
             if configuration == "Debug":
                 values["SWIFT_ACTIVE_COMPILATION_CONDITIONS"] = (
                     values.get("SWIFT_ACTIVE_COMPILATION_CONDITIONS", "$(inherited)") + " DEBUG"
@@ -137,7 +172,7 @@ def generate():
             embed = obj("embed:widget", isa="PBXBuildFile", fileRef=widget_product,
                         settings={"ATTRIBUTES": ["RemoveHeadersOnCopy"]})
             phases.append(obj("phase:embed", isa="PBXCopyFilesBuildPhase", buildActionMask=2147483647,
-                              dstPath="", dstSubfolderSpec=13, files=[embed], name="Embed App Extensions",
+                              dstPath="", dstSubfolderSpec=13, files=[embed], name="Embed Foundation Extensions",
                               runOnlyForDeploymentPostprocessing=0))
             proxy = obj("proxy:widget", isa="PBXContainerItemProxy", containerPortal=uid("project"),
                         proxyType=1, remoteGlobalIDString=uid("target:widget"), remoteInfo="DailyRhythmWidgets")
@@ -171,7 +206,7 @@ def generate():
                        name="DailyRhythmSchemaTests", productName="DailyRhythmSchemaTests",
                        productReference=tests_product, productType="com.apple.product-type.bundle.ui-testing"))
     project = obj("project", isa="PBXProject", attributes={"BuildIndependentTargetsInParallel": "YES",
-                   "LastSwiftUpdateCheck": "1600", "LastUpgradeCheck": "1600",
+                   "LastSwiftUpdateCheck": "1600", "LastUpgradeCheck": "2700",
                    "TargetAttributes": {target: {"CreatedOnToolsVersion": "16.0"} for target in targets}},
                   buildConfigurationList=project_configs, compatibilityVersion="Xcode 14.0",
                   developmentRegion="en", hasScannedForEncodings=0, knownRegions=["en", "Base"],
@@ -180,7 +215,7 @@ def generate():
     pbx = "// !$*UTF8*$!\n" + encode({"archiveVersion": 1, "classes": {}, "objectVersion": 56,
                                        "objects": objects, "rootObject": project}) + "\n"
     scheme = f'''<?xml version="1.0" encoding="UTF-8"?>
-<Scheme LastUpgradeVersion="1600" version="1.3">
+<Scheme LastUpgradeVersion="2700" version="1.3">
   <BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES">
     <BuildActionEntries>
       <BuildActionEntry buildForTesting="YES" buildForRunning="YES" buildForProfiling="YES" buildForArchiving="YES" buildForAnalyzing="YES">
