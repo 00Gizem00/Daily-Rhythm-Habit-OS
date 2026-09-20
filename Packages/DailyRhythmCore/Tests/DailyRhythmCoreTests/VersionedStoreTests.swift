@@ -42,7 +42,7 @@ final class VersionedStoreTests: XCTestCase {
         }
         XCTAssertEqual(try Data(contentsOf: f.store.migrationBackupURL), bytes)
         let saved = try Data(contentsOf: f.url)
-        XCTAssertEqual(try JSONDecoder().decode(StoreDocument.self, from: saved).version, 2)
+        XCTAssertEqual(try JSONDecoder().decode(StoreDocument.self, from: saved).version, 3)
         let history = try f.store.history(days: 4, endingOn: stamp("2026-09-21T12:00:00Z"))
         XCTAssertEqual(history.map(\.totalCount), [3, 2, 2, 2])
         XCTAssertEqual(history.map(\.completedCount), [1, 1, 1, 0])
@@ -57,7 +57,7 @@ final class VersionedStoreTests: XCTestCase {
         let bytes = try f.installLegacy("v1-empty")
         XCTAssertTrue(try f.store.habits().isEmpty)
         XCTAssertEqual(try Data(contentsOf: f.store.migrationBackupURL), bytes)
-        XCTAssertEqual(try JSONDecoder().decode(StoreDocument.self, from: Data(contentsOf: f.url)).version, 2)
+        XCTAssertEqual(try JSONDecoder().decode(StoreDocument.self, from: Data(contentsOf: f.url)).version, 3)
     }
 
     func testFailedMigrationValidationAndUnknownFieldsPreserveOriginalBytes() throws {

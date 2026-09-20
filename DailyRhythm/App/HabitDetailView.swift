@@ -109,9 +109,10 @@ struct HabitDetailView: View {
             Text(RhythmDates.dueLabel(occurrence.due)).font(.subheadline).foregroundStyle(.secondary)
             if let duration = occurrence.durationMinutes { Text("\(duration) minutes").font(.caption) }
             if let outcome = occurrence.outcome {
-                Label(outcome == .full ? "Full step recorded" : "Light step recorded", systemImage: "checkmark.circle.fill")
+                Label(outcome == .skipped ? "Skipped · not completed" : (outcome == .full ? "Full step recorded" : "Light step recorded"),
+                      systemImage: outcome == .skipped ? "forward.end.circle" : "checkmark.circle.fill")
                     .foregroundStyle(RhythmTheme.leaf)
-                Button("Reopen this step") { model.reopen(occurrence.id) }
+                Button("Reopen this step") { model.reopen(occurrence) }
             } else {
                 if occurrence.isOverdue(at: model.refreshedAt) {
                     Label("Overdue · not recorded", systemImage: "clock").foregroundStyle(RhythmTheme.coral)

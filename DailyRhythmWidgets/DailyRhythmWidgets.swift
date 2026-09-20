@@ -31,11 +31,12 @@ struct DailyRhythmTodayWidget: Widget {
 
 struct RhythmWidgetEntry: TimelineEntry {
     let date: Date
-    let summary: DailySummary?
+    let agenda: DailyAgenda?
+    var summary: DailySummary? { agenda?.summary }
     let storageUnavailable: Bool
 
     static func placeholder(at date: Date = Date()) -> Self {
-        Self(date: date, summary: nil, storageUnavailable: false)
+        Self(date: date, agenda: nil, storageUnavailable: false)
     }
 }
 
@@ -64,16 +65,18 @@ struct RhythmTimelineProvider: TimelineProvider {
         }
         // Precompute the new local day so a delayed system refresh cannot display yesterday's tasks.
         // Calendar arithmetic matters: a local day is not always 86,400 seconds.
-        let tomorrow = entry(at: nextDay)
-        completion(Timeline(entries: [current, tomorrow], policy: .after(nextDay.addingTimeInterval(60))))
+        let wakeTimes = Set((current.agenda?.occurrences.compactMap(\.deferredUntil) ?? [])
+            .filter { $0 > now && $0 < nextDay })
+        let entries = [current] + wakeTimes.sorted().map { entry(at: $0) } + [entry(at: nextDay)]
+        completion(Timeline(entries: entries, policy: .after(nextDay.addingTimeInterval(60))))
     }
 
     private func entry(at date: Date) -> RhythmWidgetEntry {
         do {
-            let summary = try SharedRoutineStore.makeStore().summary(for: date)
-            return RhythmWidgetEntry(date: date, summary: summary, storageUnavailable: false)
+            let agenda = try SharedRoutineStore.makeStore().agenda(at: date)
+            return RhythmWidgetEntry(date: date, agenda: agenda, storageUnavailable: false)
         } catch {
-            return RhythmWidgetEntry(date: date, summary: nil, storageUnavailable: true)
+            return RhythmWidgetEntry(date: date, agenda: nil, storageUnavailable: true)
         }
     }
 }
@@ -96,7 +99,7 @@ private struct RhythmWidgetView: View {
                 case .accessoryRectangular:
                     rectangular(summary)
                 case .accessoryInline:
-                    Text("Rhythm: \(summary.fullCount) full · \(summary.lightCount) small")
+                    Text("Rhythm: \(summary.fullCount) full · \(summary.lightCount) light · \(summary.skippedCount) skipped")
                 case .systemMedium:
                     medium(summary)
                 default:
@@ -162,27 +165,28 @@ private struct RhythmWidgetView: View {
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
-            if let next = summary.occurrences.first(where: { !$0.isCompleted }) {
+            if let next = entry.agenda?.next(at: entry.date) {
                 Text(next.title)
                     .font(.headline)
                     .lineLimit(2)
                     .minimumScaleFactor(0.8)
                     .privacySensitive()
-                Text(next.normalTarget)
+                Text(summary.isLightDay ? (next.lightTarget ?? next.normalTarget) : next.normalTarget)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .privacySensitive()
                 Spacer(minLength: 0)
                 HStack(spacing: 6) {
-                    Button(intent: CompleteWidgetOccurrenceIntent(occurrence: next)) {
-                        Label("Done", systemImage: "checkmark")
+                    Button(intent: CompleteWidgetOccurrenceIntent(occurrence: next, useSmallStep: summary.isLightDay && next.lightTarget != nil)) {
+                        Label(summary.isLightDay && next.lightTarget != nil ? "Light" : "Full",
+                              systemImage: summary.isLightDay && next.lightTarget != nil ? "leaf" : "checkmark")
                             .font(.caption.weight(.semibold))
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(leaf)
-                    .accessibilityLabel("Complete \(next.title): \(next.normalTarget)")
-                    if let lightTarget = next.lightTarget {
+                    .accessibilityLabel("Complete \(next.title): \(summary.isLightDay ? (next.lightTarget ?? next.normalTarget) : next.normalTarget)")
+                    if let lightTarget = next.lightTarget, !summary.isLightDay {
                         Button(intent: CompleteWidgetOccurrenceIntent(occurrence: next, useSmallStep: true)) {
                             Image(systemName: "leaf")
                                 .font(.caption.weight(.semibold))
@@ -198,11 +202,11 @@ private struct RhythmWidgetView: View {
                 Image(systemName: summary.totalCount > 0 ? "sparkles" : "sun.horizon")
                     .font(.title2)
                     .foregroundStyle(leaf)
-                Text(summary.totalCount > 0 ? "Your rhythm, found." : "Room to begin.")
+                Text(summary.remainingCount > 0 ? "Planned for later." : (summary.totalCount > 0 ? "No steps waiting." : "Room to begin."))
                     .font(.headline)
                     .minimumScaleFactor(0.8)
                 Text(summary.totalCount > 0
-                     ? "\(summary.fullCount) full · \(summary.lightCount) small"
+                     ? "\(summary.fullCount) full · \(summary.lightCount) light · \(summary.skippedCount) skipped"
                      : "Open the app to add a habit.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -234,15 +238,15 @@ private struct RhythmWidgetView: View {
                 }
                 .frame(width: 70, height: 70)
                 .padding(4)
-                Text("\(summary.fullCount) full · \(summary.lightCount) small")
+                Text("\(summary.fullCount) full · \(summary.lightCount) light\n\(summary.skippedCount) skipped")
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(summary.fullCount) full and \(summary.lightCount) small completions of \(summary.totalCount) steps")
+            .accessibilityLabel("\(summary.fullCount) full completions, \(summary.lightCount) light completions, \(summary.skippedCount) skipped, \(summary.remainingCount) pending, of \(summary.totalCount) planned steps")
             VStack(alignment: .leading, spacing: 9) {
-                if summary.occurrences.isEmpty {
+                if entry.agenda?.occurrences.isEmpty != false {
                     Text("Room to begin.")
                         .font(.headline)
                     Text("Open Daily Rhythm to create your first habit.")
@@ -255,26 +259,30 @@ private struct RhythmWidgetView: View {
                                 Text(step.title)
                                     .font(.subheadline.weight(.semibold))
                                     .lineLimit(1)
-                                Text(step.outcome == .light ? (step.lightTarget ?? "Small step") : step.normalTarget)
+                                Text(step.outcome == .skipped ? "Skipped" : ((step.outcome == .light || (!step.isResolved && summary.isLightDay)) ? (step.lightTarget ?? step.normalTarget) : step.normalTarget))
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(1)
                             }
                             .privacySensitive()
                             Spacer(minLength: 0)
-                            if step.isCompleted {
+                            if step.outcome == .skipped {
+                                Image(systemName: "forward.end.circle").accessibilityLabel("Skipped, not completed")
+                            } else if step.isCompleted {
                                 Image(systemName: step.outcome == .light ? "leaf.fill" : "checkmark.circle.fill")
                                     .foregroundStyle(step.outcome == .light ? coral : leaf)
                                     .accessibilityLabel(step.outcome == .light ? "Small step completed" : "Completed")
-                            } else {
-                                Button(intent: CompleteWidgetOccurrenceIntent(occurrence: step)) {
-                                    Image(systemName: "checkmark.circle")
+                            } else if step.isReady(at: entry.date) {
+                                Button(intent: CompleteWidgetOccurrenceIntent(occurrence: step, useSmallStep: summary.isLightDay && step.lightTarget != nil)) {
+                                    Image(systemName: summary.isLightDay && step.lightTarget != nil ? "leaf" : "checkmark.circle")
                                         .font(.title3)
                                         .padding(3)
                                 }
                                 .buttonStyle(.plain)
                                 .tint(leaf)
-                                .accessibilityLabel("Complete \(step.title): \(step.normalTarget)")
+                                .accessibilityLabel("Complete \(step.title): \(summary.isLightDay ? (step.lightTarget ?? step.normalTarget) : step.normalTarget)")
+                            } else {
+                                Image(systemName: "clock").accessibilityLabel("Planned for later")
                             }
                         }
                     }
@@ -292,20 +300,20 @@ private struct RhythmWidgetView: View {
                 .monospacedDigit()
         }
         .gaugeStyle(.accessoryCircularCapacity)
-        .accessibilityLabel("\(summary.fullCount) full and \(summary.lightCount) small completions of \(summary.totalCount) steps")
+        .accessibilityLabel("\(summary.fullCount) full completions, \(summary.lightCount) light completions, \(summary.skippedCount) skipped, \(summary.remainingCount) pending, of \(summary.totalCount) planned steps")
     }
 
     private func rectangular(_ summary: DailySummary) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text("\(summary.fullCount) full · \(summary.lightCount) small")
+            Text("\(summary.fullCount) full · \(summary.lightCount) light · \(summary.skippedCount) skipped")
                 .font(.headline)
-            if let next = summary.occurrences.first(where: { !$0.isCompleted }) {
+            if let next = entry.agenda?.next(at: entry.date) {
                 Text("Next: \(next.title)")
                     .font(.caption)
                     .lineLimit(1)
                     .privacySensitive()
             } else {
-                Text(summary.totalCount > 0 ? "Your rhythm, found." : "Room to begin.")
+                Text(summary.remainingCount > 0 ? "Planned for later." : (summary.totalCount > 0 ? "No steps waiting." : "Room to begin."))
                     .font(.caption)
             }
         }
@@ -313,7 +321,10 @@ private struct RhythmWidgetView: View {
     }
 
     private func visibleSteps(_ summary: DailySummary) -> [DailyOccurrence] {
-        Array((summary.occurrences.filter { !$0.isCompleted } + summary.occurrences.filter(\.isCompleted)).prefix(3))
+        let items = entry.agenda?.occurrences ?? summary.occurrences
+        return Array((items.filter { $0.isReady(at: entry.date) }
+                      + items.filter { !$0.isResolved && !$0.isReady(at: entry.date) }
+                      + items.filter(\.isResolved)).prefix(3))
     }
 
     private func fraction(_ value: Int, of total: Int) -> Double {
