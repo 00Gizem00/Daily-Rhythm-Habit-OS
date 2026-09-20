@@ -51,6 +51,12 @@ Archive and Restore use the existing history-preserving, capacity-checked comman
 
 [Issue #7 verification](verification/ISSUE-7-MANAGEMENT-VALIDATION.md) distinguishes core checks, native compilation and the user-assisted UI matrix. Calendar import, EventKit, notifications, new Siri schemas and flexible recurrence remain separate work.
 
+## Official Siri schema capability spike
+
+[Issue #10's opt-in adapter](SIRI-SCHEMA-GATE.md) compiles the actual iOS 27 reminder entity/create/update schemas while keeping the app's iOS 18 deployment target. `DAILY_RHYTHM_SCHEMA_SPIKE` is absent from normal configurations, so default metadata and widgets retain ordinary Shortcuts only. The prototype supports app-owned one-offs and explicit complete/reopen, rejects unsupported recurrence/fields without mutation, and uses the same shared store. It does not synchronize Apple Reminders or imply generic Siri routing.
+
+The signed iPhone 16/iOS 27 Debug adapter check passed create, completion, repeated completion and reopen while preserving existing plans; its own test item was archived. [Issue #10 evidence](verification/ISSUE-10-SCHEMA-VALIDATION.md) includes the device-generated report, 85 passing core tests and both opt-in/default build checks. These were direct calls to actual intent implementations, not Siri/system-dispatch evidence. Siri AI state/language, recognition and authentication checks remain open; #11 must not promote the prototype as a verified production capability.
+
 ## First-run setup and contextual help
 
 A new empty installation offers a short English setup sheet: editable morning/evening routines or one blank manual habit. Templates are local values; they do not create sample habits. Each reviewed draft entry has a stable UUID, editable goals/schedule and an explicit Remove action. The draft allows one to three recurring habits, with the regular Free activation check still enforced inside the store. One-off creation stays in the existing manual Add form.
