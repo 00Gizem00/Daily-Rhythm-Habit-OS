@@ -87,7 +87,7 @@ struct RhythmReminderLocationQuery: EntityStringQuery {
 
 @available(iOS 27.0, *)
 @AppEntity(schema: .reminders.reminder)
-struct RhythmSchemaReminder {
+struct RhythmSchemaReminder: IndexedEntity {
     static let defaultQuery = RhythmSchemaReminderQuery()
     let id: String
     var title: String
@@ -133,7 +133,7 @@ struct RhythmSchemaReminder {
 struct RhythmSchemaReminderQuery: EntityStringQuery {
     func entities(for identifiers: [String]) async throws -> [RhythmSchemaReminder] {
         let store = try SharedRoutineStore.makeStore()
-        let oneOffIDs = Set(try store.habits(includeArchived: true).filter { !$0.recurrence.isRecurring }.map(\.id))
+        let oneOffIDs = Set(try store.habits().filter { !$0.recurrence.isRecurring }.map(\.id))
         return try identifiers.compactMap { id in
             let step: DailyOccurrence
             do { step = try store.occurrence(id: id) }
@@ -151,7 +151,7 @@ struct RhythmSchemaReminderQuery: EntityStringQuery {
 
     private func all() throws -> [RhythmSchemaReminder] {
         let store = try SharedRoutineStore.makeStore()
-        return try store.habits(includeArchived: true).filter { !$0.recurrence.isRecurring }.flatMap {
+        return try store.habits().filter { !$0.recurrence.isRecurring }.flatMap {
             try store.managedOccurrences(habitID: $0.id).map { RhythmSchemaReminder($0) }
         }
     }
@@ -179,7 +179,7 @@ struct CreateRhythmSchemaReminder {
 
     func perform() async throws -> some IntentResult & ReturnsValue<RhythmSchemaReminder> {
         guard list == nil || list?.id == RhythmReminderList.appList.id else { throw ReminderMappingError.unsupportedItem }
-        guard note == nil, isFlagged == nil, images.isEmpty, tags.isEmpty, urls.isEmpty,
+        guard note == nil, isFlagged != true, images.isEmpty, tags.isEmpty, urls.isEmpty,
               locationTrigger == nil, section == nil else { throw ReminderMappingError.unsupportedFields }
         let now = Date()
         let definition = try ReminderSchemaMapping.definition(title: title, dueDate: dueDate,
@@ -189,6 +189,7 @@ struct CreateRhythmSchemaReminder {
         guard case .once(let key) = habit.recurrence else { throw ReminderMappingError.unsupportedItem }
         let step = try store.occurrence(id: "\(habit.id.uuidString)|\(key)")
         RhythmSurfaceRefresh.reload()
+        await ReminderSchemaIndex.shared.refreshAfterMutation()
         return .result(value: RhythmSchemaReminder(step, createdAt: habit.createdAt))
     }
 }
@@ -219,7 +220,7 @@ struct UpdateRhythmSchemaReminder {
         else { throw ReminderMappingError.unsupportedUpdate }
         let store = try SharedRoutineStore.makeStore()
         let step = try store.occurrence(id: target.id)
-        guard try store.habits(includeArchived: true).contains(where: { $0.id == step.habitID && !$0.recurrence.isRecurring })
+        guard try store.habits().contains(where: { $0.id == step.habitID && !$0.recurrence.isRecurring })
         else { throw ReminderMappingError.unsupportedItem }
         if isCompleted {
             guard step.outcome != .skipped else { throw RoutineStoreError.completedOccurrence }
@@ -228,6 +229,7 @@ struct UpdateRhythmSchemaReminder {
             try store.reopen(occurrenceID: step.id, expectedRevision: step.revision)
         }
         RhythmSurfaceRefresh.reload()
+        await ReminderSchemaIndex.shared.refreshAfterMutation()
         return .result(value: RhythmSchemaReminder(try store.occurrence(id: step.id)))
     }
 }

@@ -45,9 +45,10 @@ def generate():
     app_sources = sorted(ROOT.glob("DailyRhythm/App/**/*.swift"))
     shared_sources = sorted(ROOT.glob("DailyRhythm/Shared/**/*.swift"))
     widget_sources = sorted(ROOT.glob("DailyRhythmWidgets/**/*.swift"))
+    schema_test_sources = sorted(ROOT.glob("DailyRhythmSchemaTests/**/*.swift"))
     if not app_sources or not shared_sources or not widget_sources:
         raise SystemExit("App, shared, and widget source directories must contain Swift files.")
-    sources = sorted(set(app_sources + shared_sources + widget_sources))
+    sources = sorted(set(app_sources + shared_sources + widget_sources + schema_test_sources))
     file_refs = {}
     resource = "DailyRhythm/Resources/PrivacyInfo.xcprivacy"
     for path in [str(p.relative_to(ROOT)) for p in sources] + [resource]:
@@ -60,7 +61,9 @@ def generate():
                       includeInIndex=0, path="DailyRhythm.app", sourceTree="BUILT_PRODUCTS_DIR")
     widget_product = obj("product:widget", isa="PBXFileReference", explicitFileType="wrapper.app-extension",
                          includeInIndex=0, path="DailyRhythmWidgets.appex", sourceTree="BUILT_PRODUCTS_DIR")
-    products = obj("group:products", isa="PBXGroup", children=[app_product, widget_product],
+    tests_product = obj("product:schema-tests", isa="PBXFileReference", explicitFileType="wrapper.cfbundle",
+                        includeInIndex=0, path="DailyRhythmSchemaTests.xctest", sourceTree="BUILT_PRODUCTS_DIR")
+    products = obj("group:products", isa="PBXGroup", children=[app_product, widget_product, tests_product],
                    name="Products", sourceTree="<group>")
     root_group = obj("group:main", isa="PBXGroup", children=list(file_refs.values()) + [products],
                      sourceTree="<group>")
@@ -145,6 +148,28 @@ def generate():
                            packageProductDependencies=[package_product], productName=name, productReference=product,
                            productType="com.apple.product-type.application" if kind == "app"
                            else "com.apple.product-type.app-extension"))
+    # Opt-in iOS 27 out-of-process App Intents tests. Not part of the product scheme.
+    test_builds = [obj(f"build:schema-tests:{p.relative_to(ROOT)}", isa="PBXBuildFile",
+                       fileRef=file_refs[str(p.relative_to(ROOT))]) for p in schema_test_sources]
+    test_sources = obj("sources:schema-tests", isa="PBXSourcesBuildPhase", buildActionMask=2147483647,
+                       files=test_builds, runOnlyForDeploymentPostprocessing=0)
+    test_frameworks = obj("frameworks:schema-tests", isa="PBXFrameworksBuildPhase", buildActionMask=2147483647,
+                          files=[], runOnlyForDeploymentPostprocessing=0)
+    app_proxy = obj("proxy:schema-tests-app", isa="PBXContainerItemProxy", containerPortal=uid("project"),
+                    proxyType=1, remoteGlobalIDString=uid("target:app"), remoteInfo="DailyRhythm")
+    app_dependency = obj("dependency:schema-tests-app", isa="PBXTargetDependency",
+                         target=uid("target:app"), targetProxy=app_proxy)
+    test_settings = {
+        "PRODUCT_NAME": "$(TARGET_NAME)", "PRODUCT_BUNDLE_IDENTIFIER": "com.lumetechllc.DailyRhythm.SchemaTests",
+        "GENERATE_INFOPLIST_FILE": "YES", "TEST_TARGET_NAME": "DailyRhythm",
+        "IPHONEOS_DEPLOYMENT_TARGET": "27.0", "SKIP_INSTALL": "YES",
+        "LD_RUNPATH_SEARCH_PATHS": ["$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks"],
+    }
+    targets.append(obj("target:schema-tests", isa="PBXNativeTarget",
+                       buildConfigurationList=configs("schema-tests", test_settings),
+                       buildPhases=[test_sources, test_frameworks], buildRules=[], dependencies=[app_dependency],
+                       name="DailyRhythmSchemaTests", productName="DailyRhythmSchemaTests",
+                       productReference=tests_product, productType="com.apple.product-type.bundle.ui-testing"))
     project = obj("project", isa="PBXProject", attributes={"BuildIndependentTargetsInParallel": "YES",
                    "LastSwiftUpdateCheck": "1600", "LastUpgradeCheck": "1600",
                    "TargetAttributes": {target: {"CreatedOnToolsVersion": "16.0"} for target in targets}},
@@ -178,9 +203,13 @@ def generate():
   <ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES"/>
 </Scheme>
 '''
+    test_reference = f'<BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="{uid("target:schema-tests")}" BuildableName="DailyRhythmSchemaTests.xctest" BlueprintName="DailyRhythmSchemaTests" ReferencedContainer="container:DailyRhythm.xcodeproj"/>'
+    test_scheme = scheme.replace("<Testables/>", f'<Testables><TestableReference skipped="NO">{test_reference}</TestableReference></Testables>')
+    test_scheme = test_scheme.replace("</BuildActionEntries>", f'<BuildActionEntry buildForTesting="YES" buildForRunning="NO" buildForProfiling="NO" buildForArchiving="NO" buildForAnalyzing="YES">{test_reference}</BuildActionEntry></BuildActionEntries>')
     return {
         ROOT / "DailyRhythm.xcodeproj/project.pbxproj": pbx,
         ROOT / "DailyRhythm.xcodeproj/xcshareddata/xcschemes/DailyRhythm.xcscheme": scheme,
+        ROOT / "DailyRhythm.xcodeproj/xcshareddata/xcschemes/DailyRhythmSchemaTests.xcscheme": test_scheme,
     }
 
 

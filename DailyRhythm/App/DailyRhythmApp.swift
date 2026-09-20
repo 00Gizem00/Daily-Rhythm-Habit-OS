@@ -89,6 +89,9 @@ private struct RhythmRootView: View {
             if #available(iOS 27.0, *) { await ReminderSchemaSmoke.runIfRequested() }
             #endif
             model.refresh()
+            #if DAILY_RHYTHM_SCHEMA_SPIKE && compiler(>=6.4)
+            if #available(iOS 27.0, *) { await ReminderSchemaIndex.shared.refreshAfterMutation() }
+            #endif
             // Extension writes and local midnight can happen without an app event.
             while !Task.isCancelled {
                 do {
