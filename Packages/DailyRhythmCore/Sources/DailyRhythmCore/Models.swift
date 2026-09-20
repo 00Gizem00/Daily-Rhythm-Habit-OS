@@ -8,7 +8,7 @@ public enum DayPart: String, CaseIterable, Codable, Sendable {
 
 public enum CompletionOutcome: String, Codable, Sendable { case full, light, skipped }
 
-/// `appIntent` covers ordinary Shortcuts and Siri; those callers cannot be distinguished reliably.
+/// `appIntent` covers Shortcuts, Siri and configured Controls; no system-caller inference is made.
 public enum CompletionSource: String, Codable, Sendable { case app, widget, appIntent }
 
 /// The complete supported recurrence vocabulary. Unknown encoded cases fail decoding.

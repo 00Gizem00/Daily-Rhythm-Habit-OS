@@ -119,7 +119,7 @@ final class AppModel: ObservableObject {
         do {
             try action()
             operationError = nil
-            WidgetCenter.shared.reloadAllTimelines()
+            RhythmSurfaceRefresh.reload()
             refresh()
             return true
         } catch {

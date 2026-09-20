@@ -194,6 +194,28 @@ public final class RoutineStore: @unchecked Sendable {
         }
     }
 
+    /// A configured control always resolves this habit's original planned day at invocation.
+    /// Never advance to a carryover or another habit after a repeated completion.
+    @discardableResult
+    public func completeCurrentHabit(habitID: UUID, now: Date = Date()) throws -> DailyOccurrence {
+        try checkDate(now)
+        return try transaction { state in
+            let habit = state.habits[try self.index(of: habitID, in: state)]
+            guard habit.archivedAt == nil else { throw HabitControlError.archived }
+            guard var current = try self.occurrence(for: habit, on: self.localDay.key(for: now), state: state)
+            else { throw HabitControlError.noCurrentOccurrence }
+            // Preserve both full and light results, timestamps, source and revision on retries.
+            if current.isCompleted { return (current, false) }
+            guard current.outcome != .skipped else { throw HabitControlError.skipped }
+            guard current.isReady(at: now, calendar: self.localDay.calendar)
+            else { throw HabitControlError.notReady }
+            try self.apply(.complete(.full), to: &current, source: .appIntent, now: now)
+            current.mutationID = UUID()
+            self.save(current, in: &state, now: now, stampRevision: false)
+            return (current, true)
+        }
+    }
+
     public func reopen(occurrenceID: String, expectedRevision: String? = nil, now: Date = Date()) throws {
         try checkDate(now)
         try transaction { state in

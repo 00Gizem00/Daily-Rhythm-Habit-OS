@@ -7,6 +7,8 @@ import DailyRhythmCore
 struct DailyRhythmWidgetBundle: WidgetBundle {
     var body: some Widget {
         DailyRhythmTodayWidget()
+        OpenTodayControl()
+        CompleteHabitControl()
     }
 }
 
@@ -16,6 +18,8 @@ struct DailyRhythmTodayWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: RhythmTimelineProvider()) { entry in
             RhythmWidgetView(entry: entry)
+                .privacySensitive()
+                .widgetURL(RhythmSurfaceRefresh.todayURL)
                 .containerBackground(for: .widget) {
                     Color(uiColor: .systemBackground)
                 }
@@ -57,17 +61,15 @@ struct RhythmTimelineProvider: TimelineProvider {
         let now = Date()
         let calendar = Calendar.current
         let current = entry(at: now)
-        guard !current.storageUnavailable,
-              let nextDay = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) else {
+        guard !current.storageUnavailable, let agenda = current.agenda,
+              let nextDay = agenda.widgetRefreshDates(after: now, calendar: calendar).last else {
             // Temporary data protection / storage failure is visible, never displayed as zero habits.
             completion(Timeline(entries: [current], policy: .after(now.addingTimeInterval(15 * 60))))
             return
         }
         // Precompute the new local day so a delayed system refresh cannot display yesterday's tasks.
         // Calendar arithmetic matters: a local day is not always 86,400 seconds.
-        let wakeTimes = Set((current.agenda?.occurrences.compactMap(\.deferredUntil) ?? [])
-            .filter { $0 > now && $0 < nextDay })
-        let entries = [current] + wakeTimes.sorted().map { entry(at: $0) } + [entry(at: nextDay)]
+        let entries = [current] + agenda.widgetRefreshDates(after: now, calendar: calendar).map { entry(at: $0) }
         completion(Timeline(entries: entries, policy: .after(nextDay.addingTimeInterval(60))))
     }
 
@@ -83,6 +85,8 @@ struct RhythmTimelineProvider: TimelineProvider {
 
 private struct RhythmWidgetView: View {
     @Environment(\.widgetFamily) private var family
+    @Environment(\.redactionReasons) private var redactionReasons
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let entry: RhythmWidgetEntry
 
     private let leaf = Color(red: 0.26, green: 0.52, blue: 0.43)
@@ -90,7 +94,9 @@ private struct RhythmWidgetView: View {
 
     var body: some View {
         Group {
-            if entry.storageUnavailable {
+            if redactionReasons.contains(.privacy) {
+                privateContent
+            } else if entry.storageUnavailable {
                 unavailable
             } else if let summary = entry.summary {
                 switch family {
@@ -101,15 +107,42 @@ private struct RhythmWidgetView: View {
                 case .accessoryInline:
                     Text("Rhythm: \(summary.fullCount) full · \(summary.lightCount) light · \(summary.skippedCount) skipped")
                 case .systemMedium:
-                    medium(summary)
+                    if dynamicTypeSize.isAccessibilitySize { accessibleSummary(summary) }
+                    else { medium(summary) }
                 default:
-                    small(summary)
+                    if dynamicTypeSize.isAccessibilitySize { accessibleSummary(summary) }
+                    else { small(summary) }
                 }
             } else {
                 preview
             }
         }
     }
+
+    @ViewBuilder
+    private var privateContent: some View {
+        if family == .accessoryCircular {
+            Image(systemName: "lock").accessibilityLabel("Unlock to view Daily Rhythm")
+        } else {
+            Label("Unlock to view", systemImage: "lock")
+                .font(.caption)
+                .accessibilityLabel("Unlock to view Daily Rhythm")
+        }
+    }
+
+    private func accessibleSummary(_ summary: DailySummary) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Today").font(.headline)
+            Text("\(summary.completedCount) of \(summary.totalCount)").font(.title2)
+            Text("Open to view").font(.caption)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(summary.fullCount) full, \(summary.lightCount) light, \(summary.skippedCount) skipped, \(summary.remainingCount) pending. Open Daily Rhythm for details and actions.")
+    }
+
+    private var hasPendingSteps: Bool { entry.agenda?.occurrences.contains { !$0.isResolved } == true }
+    private var hasSteps: Bool { entry.agenda?.occurrences.isEmpty == false }
 
     @ViewBuilder
     private var unavailable: some View {
@@ -157,13 +190,14 @@ private struct RhythmWidgetView: View {
     private func small(_ summary: DailySummary) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack {
-                Text("NEXT UP")
+                Text(summary.isLightDay ? "LIGHT DAY" : "NEXT UP")
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(leaf)
                 Spacer(minLength: 4)
                 Text("\(summary.completedCount)/\(summary.totalCount)")
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(.secondary)
+                    .accessibilityLabel("Today: \(summary.fullCount) full, \(summary.lightCount) light, \(summary.skippedCount) skipped, of \(summary.totalCount) planned steps")
             }
             if let next = entry.agenda?.next(at: entry.date) {
                 Text(next.title)
@@ -171,7 +205,7 @@ private struct RhythmWidgetView: View {
                     .lineLimit(2)
                     .minimumScaleFactor(0.8)
                     .privacySensitive()
-                Text(summary.isLightDay ? (next.lightTarget ?? next.normalTarget) : next.normalTarget)
+                Text((next.dayKey != summary.dayKey ? "Earlier · " : "") + (summary.isLightDay ? (next.lightTarget ?? next.normalTarget) : next.normalTarget))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -202,12 +236,12 @@ private struct RhythmWidgetView: View {
                 Image(systemName: summary.totalCount > 0 ? "sparkles" : "sun.horizon")
                     .font(.title2)
                     .foregroundStyle(leaf)
-                Text(summary.remainingCount > 0 ? "Planned for later." : (summary.totalCount > 0 ? "No steps waiting." : "Room to begin."))
+                Text(hasPendingSteps ? "Planned for later." : (hasSteps ? "No steps waiting." : "Room to begin."))
                     .font(.headline)
                     .minimumScaleFactor(0.8)
                 Text(summary.totalCount > 0
                      ? "\(summary.fullCount) full · \(summary.lightCount) light · \(summary.skippedCount) skipped"
-                     : "Open the app to add a habit.")
+                     : (hasSteps ? "Open Today to review earlier steps." : "Open the app to add a habit."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 0)
@@ -220,7 +254,7 @@ private struct RhythmWidgetView: View {
         HStack(spacing: 18) {
             VStack(alignment: .leading, spacing: 7) {
                 Text("TODAY'S RHYTHM")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.caption2.weight(.bold))
                     .foregroundStyle(.secondary)
                 ZStack {
                     Circle().stroke(Color.primary.opacity(0.08), lineWidth: 7)
@@ -239,7 +273,7 @@ private struct RhythmWidgetView: View {
                 .frame(width: 70, height: 70)
                 .padding(4)
                 Text("\(summary.fullCount) full · \(summary.lightCount) light\n\(summary.skippedCount) skipped")
-                    .font(.system(size: 10))
+                    .font(.caption2)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
@@ -259,7 +293,7 @@ private struct RhythmWidgetView: View {
                                 Text(step.title)
                                     .font(.subheadline.weight(.semibold))
                                     .lineLimit(1)
-                                Text(step.outcome == .skipped ? "Skipped" : ((step.outcome == .light || (!step.isResolved && summary.isLightDay)) ? (step.lightTarget ?? step.normalTarget) : step.normalTarget))
+                                Text((step.dayKey != summary.dayKey ? "Earlier · " : "") + (step.outcome == .skipped ? "Skipped" : ((step.outcome == .light || (!step.isResolved && summary.isLightDay)) ? (step.lightTarget ?? step.normalTarget) : step.normalTarget)))
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(1)
@@ -313,7 +347,7 @@ private struct RhythmWidgetView: View {
                     .lineLimit(1)
                     .privacySensitive()
             } else {
-                Text(summary.remainingCount > 0 ? "Planned for later." : (summary.totalCount > 0 ? "No steps waiting." : "Room to begin."))
+                Text(hasPendingSteps ? "Planned for later." : (hasSteps ? "No steps waiting." : "Room to begin."))
                     .font(.caption)
             }
         }
