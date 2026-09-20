@@ -1,6 +1,6 @@
 # Version 2: schedules, occurrences and migration
 
-Implements [issue #5](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/issues/5). The Foundation-only `DailyRhythmCore` package remains the single mutation service for the app, widgets and ordinary App Intents. UI and Siri schema support for the new creation/editing options are subsequent roadmap work. Existing creation screens and Shortcuts still create repeating, date-only habits.
+Implements [issue #5](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/issues/5). The Foundation-only `DailyRhythmCore` package remains the single mutation service for the app, widgets and ordinary App Intents. [Issue #7 management screens](IMPLEMENTATION.md#habit-and-one-off-management) expose creation and history-preserving editing; ordinary creation Shortcuts still create repeating, date-only habits. Siri schema support remains later roadmap work.
 
 ## Supported values
 
@@ -50,7 +50,7 @@ Saved timed snapshots retain their exact instant and timezone. Unmaterialized ti
 
 New app taps pass `.app`. Widget buttons use a dedicated undiscoverable `CompleteWidgetOccurrenceIntent` and pass `.widget`, regardless of which process iOS selects to run the intent. The ordinary `CompleteOccurrenceIntent` passes `.appIntent`; Siri and Shortcuts cannot be distinguished reliably here. The store's default is nil for unspecified callers.
 
-All migrated completions have nil source. Migration does not infer a surface, duration or due time. The new widget intent is compiled into both targets; existing ordinary Shortcut identifiers remain available. The current UI/intents still enforce their existing “today” stale-action guard; exposing overdue/one-off editing in those surfaces is follow-up work.
+All migrated completions have nil source. Migration does not infer a surface, duration or due time. The new widget intent is compiled into both targets; existing ordinary Shortcut identifiers remain available. Today and current widget/Shortcut intents keep their “today” stale-action guard. The management screen can act on an explicitly selected overdue occurrence by exact ID, under the core due-day guard.
 
 ## Migration, failures and recovery
 

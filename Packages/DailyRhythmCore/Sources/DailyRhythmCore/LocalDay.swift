@@ -1,28 +1,28 @@
 import Foundation
 
-struct LocalDay: Sendable {
-    let calendar: Calendar
+public struct LocalDay: Sendable {
+    public let calendar: Calendar
 
-    static let utc: LocalDay = {
+    public static let utc: LocalDay = {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         return LocalDay(calendar: calendar)
     }()
 
-    init(calendar: Calendar) {
+    public init(calendar: Calendar) {
         var gregorian = Calendar(identifier: .gregorian)
         gregorian.timeZone = calendar.timeZone
         gregorian.locale = Locale(identifier: "en_US_POSIX")
         self.calendar = gregorian
     }
 
-    func key(for date: Date) -> String {
+    public func key(for date: Date) -> String {
         let components = calendar.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", components.year!, components.month!, components.day!)
     }
 
     /// Noon avoids midnight transitions in timezones that change DST at midnight.
-    func date(for key: String) -> Date? {
+    public func date(for key: String) -> Date? {
         let parts = key.split(separator: "-", omittingEmptySubsequences: false)
         guard parts.count == 3, parts[0].count == 4, parts[1].count == 2, parts[2].count == 2,
               let year = Int(parts[0]), let month = Int(parts[1]), let day = Int(parts[2]),

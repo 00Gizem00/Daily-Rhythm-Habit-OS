@@ -148,6 +148,10 @@ public struct DailyOccurrence: Identifiable, Codable, Equatable, Sendable {
 
     public var isCompleted: Bool { outcome != nil }
 
+    public func canComplete(at now: Date = Date(), calendar: Calendar = .current) -> Bool {
+        !isCompleted && due.dayKey(calendar: calendar) <= due.currentDay(at: now, calendar: calendar)
+    }
+
     public func isOverdue(at now: Date = Date(), calendar: Calendar = .current) -> Bool {
         guard !isCompleted else { return false }
         switch due {

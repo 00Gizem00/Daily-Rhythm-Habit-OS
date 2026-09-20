@@ -19,7 +19,7 @@ final class AppModel: ObservableObject {
     var archivedHabits: [Habit] { habits.filter { $0.archivedAt != nil } }
 
     var nextOccurrence: DailyOccurrence? {
-        today?.occurrences.first { $0.outcome == nil }
+        today?.occurrences.first { $0.canComplete(at: refreshedAt) }
     }
 
     func refresh() {
@@ -41,27 +41,22 @@ final class AppModel: ObservableObject {
     }
 
     @discardableResult
-    func addHabit(title: String, normalTarget: String, lightTarget: String?, dayPart: DayPart, weekdays: Set<Int>) -> Bool {
+    func addHabit(_ definition: HabitDefinition) -> Bool {
         performMutation {
-            let store = try SharedRoutineStore.makeStore()
-            _ = try store.addHabit(
-                title: title,
-                normalTarget: normalTarget,
-                lightTarget: lightTarget,
-                dayPart: dayPart,
-                weekdays: weekdays
-            )
+            _ = try SharedRoutineStore.makeStore().addHabit(definition)
         }
     }
 
-    func complete(_ occurrence: DailyOccurrence, outcome: CompletionOutcome) {
+    func complete(_ occurrence: DailyOccurrence, outcome: CompletionOutcome, requiringToday: Bool = true) {
         guard occurrence.outcome == nil else { return }
         if performMutation({
             let store = try SharedRoutineStore.makeStore()
             let now = Date()
-            guard try store.summary(for: now).dayKey == occurrence.dayKey else {
-                refresh()
-                throw AppActionError.dayChanged
+            if requiringToday {
+                guard try store.summary(for: now).dayKey == occurrence.dayKey else {
+                    refresh()
+                    throw AppActionError.dayChanged
+                }
             }
             try store.complete(occurrenceID: occurrence.id, outcome: outcome, source: .app, now: now)
         }) {
@@ -81,6 +76,31 @@ final class AppModel: ObservableObject {
     func archive(_ habit: Habit) {
         _ = performMutation {
             try SharedRoutineStore.makeStore().archive(habitID: habit.id)
+        }
+    }
+
+    func restore(_ habit: Habit) {
+        _ = performMutation { try SharedRoutineStore.makeStore().restore(habitID: habit.id) }
+    }
+
+    func editSchedule(habitID: UUID, definition: HabitDefinition, effectiveDayKey: String) -> Bool {
+        performMutation {
+            try SharedRoutineStore.makeStore().editHabit(habitID: habitID, definition: definition,
+                                                        effectiveDayKey: effectiveDayKey)
+        }
+    }
+
+    func editOccurrence(_ occurrence: DailyOccurrence, draft: HabitFormDraft, dueOnly: Bool) -> Bool {
+        performMutation {
+            let store = try SharedRoutineStore.makeStore()
+            let due = try draft.due()
+            if dueOnly { try store.rescheduleOccurrence(occurrenceID: occurrence.id, due: due) }
+            else {
+                let definition = try draft.definition()
+                try store.updateOccurrence(occurrenceID: occurrence.id, normalTarget: definition.normalTarget,
+                                           lightTarget: definition.lightTarget, durationMinutes: definition.durationMinutes,
+                                           due: due)
+            }
         }
     }
 
@@ -125,6 +145,29 @@ extension DayPart {
 }
 
 enum RhythmDates {
+    static func planLabel(_ definition: HabitDefinition) -> String {
+        let recurrence: String
+        switch definition.recurrence {
+        case .weekly(let weekdays): recurrence = scheduleLabel(weekdays)
+        case .once(let key): recurrence = "Once · \(dayLabel(key))"
+        }
+        guard let time = definition.dueTime else { return recurrence + " · Date only" }
+        return recurrence + String(format: " · %02d:%02d · ", time.hour, time.minute) + time.timeZoneIdentifier
+    }
+
+    static func dueLabel(_ due: OccurrenceDue) -> String {
+        switch due {
+        case .dateOnly(let key): return "Due \(dayLabel(key)) · Date only"
+        case .timed(let at, let zone):
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_GB")
+            formatter.calendar = Calendar(identifier: .gregorian)
+            formatter.timeZone = TimeZone(identifier: zone)
+            formatter.dateFormat = "d MMM yyyy, HH:mm"
+            return "Due \(formatter.string(from: at)) · \(zone)"
+        }
+    }
+
     static func todayLabel(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_GB")
@@ -138,7 +181,7 @@ enum RhythmDates {
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.dateFormat = "yyyy-MM-dd"
         guard let date = formatter.date(from: dayKey) else { return dayKey }
-        formatter.dateFormat = "EEE, d MMM"
+        formatter.dateFormat = "EEE, d MMM yyyy"
         return formatter.string(from: date)
     }
 

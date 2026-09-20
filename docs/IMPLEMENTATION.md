@@ -15,7 +15,7 @@ This milestone establishes a local habit loop that the future Siri AI and PCC fe
 
 ## Data and concurrency
 
-The core now uses version 2 of the JSON model, with one-off or weekly recurrence, distinct date-only/timed due values, optional numeric durations, effective-dated revisions, occurrence overrides and archive/restore intervals. Existing creation screens and Shortcuts continue to use their original repeating, date-only options. See [MODEL-V2.md](MODEL-V2.md) for the supported rules, API contracts and recovery procedure.
+The core now uses version 2 of the JSON model, with one-off or weekly recurrence, distinct date-only/timed due values, optional numeric durations, effective-dated revisions, occurrence overrides and archive/restore intervals. The creation/management screens expose these options; ordinary creation Shortcuts still use repeating, date-only options. See [MODEL-V2.md](MODEL-V2.md) for the supported rules, API contracts and recovery procedure.
 
 Occurrence identity remains the habit UUID plus its original planned civil date. Postponing changes its due value without moving the historical denominator. Future edits select a new effective revision and preserve previous planned days, including those never completed. Saved completions own their target snapshots; first completion retains its outcome, timestamp and source until explicitly reopened. Migrated records have unknown source.
 
@@ -36,6 +36,20 @@ Both `addHabit` overloads delegate to the atomic `addHabits` batch API. Single a
 Existing stores above the cap remain valid, including v1 migrations and a future Pro downgrade. Reading, completion, undo, history, existing-habit edits and archiving do not query entitlements. No habits are deleted or automatically archived. New recurring creation/restoration is refused until the resulting active count fits; one-offs remain available while over capacity. The future export surface (#15) must keep using ungated data reads; this policy does not add that UI. New schemas and proposal Apply must use these store APIs rather than count/loop/save independently.
 
 The creation form explains the Free limit before submission and keeps entered values on failure. The store returns one English `activeHabitLimitReached` error for app and Shortcuts callers, without a success response or widget reload from the failing creation path. [Issue #6 verification](verification/ISSUE-6-FREE-POLICY-VALIDATION.md) records the executable checks and integration boundaries.
+
+## Habit and one-off management
+
+The existing creation form switches between recurring habits and one-off tasks, with explicit civil dates, optional due times in a named timezone, normal/light targets and an optional positive whole-minute duration. A due time does not schedule a notification. `HabitFormDraft` is an unsaved value: field changes, validation and Cancel do not write. Only Create/Save call the normal transaction service. Invalid values and capacity failures retain the form input and report the underlying English error.
+
+Habits rows open a management screen for active or archived plans. **Edit future plan** saves a complete effective-dated revision strictly after today; scheduled revisions are visible and individually editable. Recurrence type stays fixed. A future one-off can edit its definition up to its original planned date. **Edit this step** changes only the selected pending occurrence's targets, optional duration and due value. For an earlier planned day, only due changes are exposed; its historical targets stay intact. Completed steps require Reopen before editing. Moving a one-off's due date never creates a replacement occurrence or changes its history date.
+
+Civil-date pickers use Gregorian UTC to preserve the chosen date string independently of device timezone. Time pickers collect wall-clock hour/minute separately from the named timezone. Conversion reuses the core DST rules. An unchanged occurrence due selection retains the original exact instant, including seconds/subseconds and a repeated-hour selection, when editing a target.
+
+`managedOccurrences` reads a one-off at its original identity even when overdue or completed. For recurring habits it reads the next seven planned civil dates plus earlier saved pending steps and earlier steps completed within that window (so Undo remains accessible). It does not generate every unrecorded missed recurring day as catch-up work or write future occurrences. Due and overdue labels are separate from full/light completion. Today's Next Up excludes postponed steps whose due day has not arrived; the empty eligible state does not claim that those pending steps are complete.
+
+Archive and Restore use the existing history-preserving, capacity-checked commands. Archive stops pending work from the archive date forward; Restore cannot fill an older archived gap, including a missed one-off. Management can complete an exact overdue step with the core due-day guard. Today and existing widget/Shortcut actions retain their current-day stale-action guard.
+
+[Issue #7 verification](verification/ISSUE-7-MANAGEMENT-VALIDATION.md) distinguishes core checks, native compilation and the user-assisted UI matrix. Calendar import, EventKit, notifications, new Siri schemas and flexible recurrence remain separate work.
 
 ## Siri and widget scope
 

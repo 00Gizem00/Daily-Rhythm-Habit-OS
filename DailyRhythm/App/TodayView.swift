@@ -25,7 +25,7 @@ struct TodayView: View {
                         progress(today)
                         if let next = model.nextOccurrence {
                             NextUpCard(occurrence: next)
-                        } else {
+                        } else if today.remainingCount == 0 {
                             RhythmCard {
                                 Label("Today's rhythm is complete.", systemImage: "sparkles")
                                     .font(.title3.weight(.semibold))
@@ -33,6 +33,13 @@ struct TodayView: View {
                                     .font(.subheadline)
                                     .foregroundStyle(RhythmTheme.muted)
                                     .padding(.top, 6)
+                            }
+                        } else {
+                            RhythmCard {
+                                Label("Planned for later.", systemImage: "calendar")
+                                    .font(.title3.weight(.semibold))
+                                Text("Pending steps keep their due dates. They have not been recorded as complete.")
+                                    .font(.subheadline).foregroundStyle(RhythmTheme.muted)
                             }
                         }
                         if let undoID = model.lastCompletedID,
@@ -189,6 +196,11 @@ private struct NextUpCard: View {
                 Text(occurrence.normalTarget)
                     .font(.title3)
                     .foregroundStyle(RhythmTheme.muted)
+                Text(RhythmDates.dueLabel(occurrence.due))
+                    .font(.caption).foregroundStyle(RhythmTheme.muted)
+                if occurrence.isOverdue(at: model.refreshedAt) {
+                    Text("Overdue · not recorded").font(.caption).foregroundStyle(RhythmTheme.coral)
+                }
             }
             Button { model.complete(occurrence, outcome: .full) } label: {
                 Label("Full step done", systemImage: "checkmark")
@@ -203,6 +215,8 @@ private struct NextUpCard: View {
                 .buttonStyle(RhythmSecondaryButtonStyle())
                 .accessibilityLabel("Complete \(occurrence.title), light goal: \(light)")
             }
+            NavigationLink("Edit or manage this plan") { HabitDetailView(habitID: occurrence.habitID) }
+                .font(.subheadline)
         }
         .padding(24)
         .background(RhythmTheme.coral.opacity(0.075), in: RoundedRectangle(cornerRadius: 26))
@@ -225,11 +239,16 @@ private struct OccurrenceRow: View {
                 .frame(width: 26)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
-                Text(occurrence.title).font(.body.weight(.medium))
+                NavigationLink { HabitDetailView(habitID: occurrence.habitID) } label: {
+                    Text(occurrence.title).font(.body.weight(.medium))
+                }
+                .buttonStyle(.plain)
                 Text(outcomeDetail)
                     .font(.caption)
                     .foregroundStyle(RhythmTheme.muted)
                     .fixedSize(horizontal: false, vertical: true)
+                Text(RhythmDates.dueLabel(occurrence.due))
+                    .font(.caption2).foregroundStyle(RhythmTheme.muted)
             }
             Spacer(minLength: 4)
             if occurrence.outcome != nil {
@@ -240,8 +259,10 @@ private struct OccurrenceRow: View {
             } else {
                 Menu {
                     Button("Full: \(occurrence.normalTarget)") { model.complete(occurrence, outcome: .full) }
+                        .disabled(!occurrence.canComplete(at: model.refreshedAt))
                     if let light = occurrence.lightTarget {
                         Button("Light: \(light)") { model.complete(occurrence, outcome: .light) }
+                            .disabled(!occurrence.canComplete(at: model.refreshedAt))
                     }
                 } label: {
                     Image(systemName: "checkmark")
