@@ -534,6 +534,24 @@
 			);
 			"runOnlyForDeploymentPostprocessing" = 0;
 		};
+		"297903CC54877B13B25E0DED" = {
+			"isa" = "PBXShellScriptBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = (
+			);
+			"inputPaths" = (
+				"$(SRCROOT)/scripts/check_source_membership.py",
+				"$(SRCROOT)/DailyRhythm/App",
+				"$(SRCROOT)/DailyRhythm/Shared",
+			);
+			"outputPaths" = (
+			);
+			"name" = "Check loaded Swift source membership";
+			"shellPath" = "/bin/sh";
+			"shellScript" = "/usr/bin/python3 -B \"$SRCROOT/scripts/check_source_membership.py\" --root \"$SRCROOT\" --target app --expected 2018fd286ae24cfafa56675b9fba9903ab34c4c954d3f3a52ee6d5cb8d24104d\n";
+			"alwaysOutOfDate" = 1;
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
 		"5457AB9FB521F7F7EF0268A3" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "4C47665D1BA4105DF9684DC4";
@@ -615,6 +633,7 @@
 			"isa" = "PBXNativeTarget";
 			"buildConfigurationList" = "9EA62D25DFD1EFBA21F6DE7B";
 			"buildPhases" = (
+				"297903CC54877B13B25E0DED",
 				"D10ECEDA0FB53BA093BEC557",
 				"C19A4328C9961E8F8A7CF4CD",
 				"C84B5C31679C986BFD935BC6",
@@ -709,6 +728,24 @@
 			);
 			"runOnlyForDeploymentPostprocessing" = 0;
 		};
+		"3EEC11B90E0B7CB323CDFA09" = {
+			"isa" = "PBXShellScriptBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = (
+			);
+			"inputPaths" = (
+				"$(SRCROOT)/scripts/check_source_membership.py",
+				"$(SRCROOT)/DailyRhythmWidgets",
+				"$(SRCROOT)/DailyRhythm/Shared",
+			);
+			"outputPaths" = (
+			);
+			"name" = "Check loaded Swift source membership";
+			"shellPath" = "/bin/sh";
+			"shellScript" = "/usr/bin/python3 -B \"$SRCROOT/scripts/check_source_membership.py\" --root \"$SRCROOT\" --target widget --expected 17803afbf1d3f531489515487aaeefe1f2d5c15fea348e9a738af73aca15a54a\n";
+			"alwaysOutOfDate" = 1;
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
 		"F4B7E5BA8E58CF01A465BB80" = {
 			"isa" = "XCBuildConfiguration";
 			"buildSettings" = {
@@ -765,6 +802,7 @@
 			"isa" = "PBXNativeTarget";
 			"buildConfigurationList" = "5E733EA2C91A646BD263FFDF";
 			"buildPhases" = (
+				"3EEC11B90E0B7CB323CDFA09",
 				"340B44853D0D58738451C8F7",
 				"40D79F40A8593FA508DC545F",
 				"44C1AF857B0FE8DD6E732654",
@@ -861,10 +899,28 @@
 			"defaultConfigurationIsVisible" = 0;
 			"defaultConfigurationName" = "Release";
 		};
+		"4CC321FF8E8BDC9FD10EED70" = {
+			"isa" = "PBXShellScriptBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = (
+			);
+			"inputPaths" = (
+				"$(SRCROOT)/scripts/check_source_membership.py",
+				"$(SRCROOT)/DailyRhythmSchemaTests",
+			);
+			"outputPaths" = (
+			);
+			"name" = "Check loaded Swift source membership";
+			"shellPath" = "/bin/sh";
+			"shellScript" = "/usr/bin/python3 -B \"$SRCROOT/scripts/check_source_membership.py\" --root \"$SRCROOT\" --target schema-tests --expected 81ee8ef93ca487aff67463ba48d80a52a378c7c1e86467ce734281b688f22364\n";
+			"alwaysOutOfDate" = 1;
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
 		"3725AC9D9E20F995764FDBED" = {
 			"isa" = "PBXNativeTarget";
 			"buildConfigurationList" = "F2A5EBC33E9E0DC45BC21826";
 			"buildPhases" = (
+				"4CC321FF8E8BDC9FD10EED70",
 				"2B391361F6776264B5640615",
 				"660F9D3634BF66738D1F529A",
 			);

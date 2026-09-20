@@ -2,14 +2,18 @@
 """Generate the checked-in Xcode project without third-party dependencies.
 
 Run after adding/removing Swift files. CI checks that the project matches its
-sources. Target/build settings live here; personal signing is set in Xcode.
+sources. Target/build settings, including the shared signing team, live here.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
+import tempfile
+
+from check_source_membership import SOURCE_DIRECTORIES, source_fingerprint
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -142,6 +146,21 @@ def generate():
                    defaultConfigurationIsVisible=0, defaultConfigurationName="Release")
 
     project_configs = configs("project", common)
+
+    def membership_guard(kind, paths):
+        # The expected value is embedded in the loaded build graph, not read from
+        # disk at build time. Thus an old Xcode session also detects new sources.
+        script = ('/usr/bin/python3 -B "$SRCROOT/scripts/check_source_membership.py" '
+                  f'--root "$SRCROOT" --target {kind} '
+                  f'--expected {source_fingerprint(ROOT, paths)}\n')
+        return obj(f"source-guard:{kind}", isa="PBXShellScriptBuildPhase",
+                   buildActionMask=2147483647, files=[],
+                   inputPaths=["$(SRCROOT)/scripts/check_source_membership.py"] +
+                              [f"$(SRCROOT)/{p}" for p in SOURCE_DIRECTORIES[kind]],
+                   outputPaths=[], name="Check loaded Swift source membership",
+                   shellPath="/bin/sh", shellScript=script,
+                   alwaysOutOfDate=1, runOnlyForDeploymentPostprocessing=0)
+
     targets = []
     for kind, name, paths, product in (
         ("app", "DailyRhythm", app_sources + shared_sources, app_product),
@@ -170,7 +189,7 @@ def generate():
             "LD_RUNPATH_SEARCH_PATHS": ["$(inherited)", "@executable_path/Frameworks"] +
                                      (["@executable_path/../../Frameworks"] if kind == "widget" else []),
         }
-        phases = [source_phase, frameworks, resources]
+        phases = [membership_guard(kind, paths), source_phase, frameworks, resources]
         dependencies = []
         if kind == "widget":
             settings.update({"APPLICATION_EXTENSION_API_ONLY": "YES", "SKIP_INSTALL": "YES",
@@ -209,7 +228,8 @@ def generate():
     }
     targets.append(obj("target:schema-tests", isa="PBXNativeTarget",
                        buildConfigurationList=configs("schema-tests", test_settings),
-                       buildPhases=[test_sources, test_frameworks], buildRules=[], dependencies=[app_dependency],
+                       buildPhases=[membership_guard("schema-tests", schema_test_sources), test_sources, test_frameworks],
+                       buildRules=[], dependencies=[app_dependency],
                        name="DailyRhythmSchemaTests", productName="DailyRhythmSchemaTests",
                        productReference=tests_product, productType="com.apple.product-type.bundle.ui-testing"))
     project = obj("project", isa="PBXProject", attributes={"BuildIndependentTargetsInParallel": "YES",
@@ -255,15 +275,39 @@ def generate():
     }
 
 
+def write_if_changed(path: Path, content: str) -> bool:
+    """Publish a complete file in one rename; leave unchanged files untouched."""
+    if path.exists() and path.read_text() == content:
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    mode = path.stat().st_mode & 0o777 if path.exists() else 0o644
+    descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    try:
+        with os.fdopen(descriptor, "w") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.chmod(temporary, mode)
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+    return True
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
+    changed = False
     for path, content in generate().items():
         if args.check:
             if not path.exists() or path.read_text() != content:
                 raise SystemExit(f"Out of date: {path.relative_to(ROOT)}. Run python3 scripts/generate_project.py")
         else:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(content)
-    print("Xcode project is up to date." if args.check else "Generated DailyRhythm.xcodeproj.")
+            changed = write_if_changed(path, content) or changed
+    if changed:
+        print("Generated DailyRhythm.xcodeproj. If it is open in Xcode, use File > Close Project "
+              "and reopen it before building. Keep the current run destination.")
+    else:
+        print("Xcode project is up to date.")
