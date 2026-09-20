@@ -3,6 +3,8 @@ import SwiftUI
 
 struct TodayView: View {
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var setup: OnboardingPreferences
+    @State private var showingSetup = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var creationRoute: HabitCreationRoute?
 
@@ -63,6 +65,7 @@ struct TodayView: View {
         }
         .background(RhythmTheme.canvas)
         .toolbar(.hidden, for: .navigationBar)
+        .sheet(isPresented: $showingSetup) { OnboardingView() }
         .sheet(item: $creationRoute) { route in
             AddHabitView(readingTemplate: route == .reading)
         }
@@ -102,9 +105,17 @@ struct TodayView: View {
                 title: "Small steps. Your pace.",
                 message: "Start with one thing that matters. Give it a full goal, and an optional smaller version for busy days."
             )
+            if model.habits.isEmpty && setup.loadError == nil {
+                Button(setup.progress.draft == nil ? "Choose a starting routine" : "Resume my setup") {
+                    setup.begin()
+                    showingSetup = true
+                }
+                .buttonStyle(RhythmPrimaryButtonStyle())
+            }
+            if let error = setup.loadError { Text(error).font(.footnote).foregroundStyle(.secondary) }
             Button("Create my first habit") { creationRoute = .custom }
                 .buttonStyle(RhythmPrimaryButtonStyle())
-            Button("Try a reading habit") { creationRoute = .reading }
+            NavigationLink("Widgets & Siri help") { SetupHelpView() }
                 .buttonStyle(RhythmSecondaryButtonStyle())
                 .padding(.top, 8)
         }

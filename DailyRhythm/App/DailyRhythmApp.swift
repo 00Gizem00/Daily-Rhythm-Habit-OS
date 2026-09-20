@@ -4,11 +4,13 @@ import UIKit
 @main
 struct DailyRhythmApp: App {
     @StateObject private var model = AppModel()
+    @StateObject private var setup = OnboardingPreferences()
 
     var body: some Scene {
         WindowGroup {
             RhythmRootView()
                 .environmentObject(model)
+                .environmentObject(setup)
                 .tint(RhythmTheme.coral)
         }
     }
@@ -16,6 +18,9 @@ struct DailyRhythmApp: App {
 
 private struct RhythmRootView: View {
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var setup: OnboardingPreferences
+    @State private var checkedFirstRun = false
+    @State private var showingSetup = false
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -26,6 +31,16 @@ private struct RhythmRootView: View {
                 .tabItem { Label("Habits", systemImage: "square.stack.3d.up") }
             NavigationStack { HistoryView() }
                 .tabItem { Label("History", systemImage: "chart.bar.xaxis") }
+        }
+        .sheet(isPresented: $showingSetup) { OnboardingView() }
+        .onChange(of: model.refreshedAt, initial: true) { _, _ in
+            guard !checkedFirstRun, model.today != nil else { return }
+            checkedFirstRun = true
+            if !model.habits.isEmpty { setup.finish() }
+            else if setup.loadError == nil && setup.progress.shouldOfferAutomatically(hasExistingHabits: false) {
+                setup.begin()
+                showingSetup = true
+            }
         }
         .foregroundStyle(RhythmTheme.ink)
         .safeAreaInset(edge: .top, spacing: 0) {

@@ -190,7 +190,7 @@ public enum RoutineStoreError: Error, Equatable, Sendable, LocalizedError {
     case invalidTitle, invalidTarget, invalidWeekdays, invalidHistoryRange, invalidOccurrence
     case invalidDueDate, invalidDuration, invalidEffectiveDate, unsupportedRecurrenceChange
     case completedOccurrence, habitNotFound, lightTargetUnavailable, futureCompletion, corruptData
-    case activeHabitLimitReached, staleAction
+    case activeHabitLimitReached, staleAction, onboardingAlreadyStarted, invalidOnboardingDraft
     case unsupportedVersion(Int)
     case fileAccess(String)
 
@@ -209,6 +209,8 @@ public enum RoutineStoreError: Error, Equatable, Sendable, LocalizedError {
         case .habitNotFound: "This habit could not be found."
         case .lightTargetUnavailable: "Add a smaller target before using Light Day."
         case .futureCompletion: "Future habits cannot be completed early."
+        case .onboardingAlreadyStarted: "You already have a plan. Continue in Today or add another habit from Habits."
+        case .invalidOnboardingDraft: "Review between one and three habits before creating your routine."
         case .staleAction: "This step has changed. Refresh and choose the action again."
         case .activeHabitLimitReached: HabitActivationPolicy.limitMessage
         case .corruptData: "Your saved data could not be read. It has been preserved."

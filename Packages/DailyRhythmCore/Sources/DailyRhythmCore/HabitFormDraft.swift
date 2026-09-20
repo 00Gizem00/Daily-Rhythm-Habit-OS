@@ -2,7 +2,7 @@ import Foundation
 
 /// An unsaved value used by creation and editing forms. No setter writes to the store.
 /// Civil dates and wall-clock time stay separate until the user explicitly saves.
-public struct HabitFormDraft: Sendable {
+public struct HabitFormDraft: Codable, Equatable, Sendable {
     public var title: String
     public var normalTarget: String
     public var hasLightTarget: Bool
