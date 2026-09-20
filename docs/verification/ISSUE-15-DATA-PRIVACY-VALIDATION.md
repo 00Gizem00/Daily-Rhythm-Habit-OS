@@ -88,3 +88,34 @@ Apple references: [required-reason API reasons](https://developer.apple.com/docu
 - Trigger old widget/Shortcut/undo/draft actions around a real device erase and relaunch during unfinished cleanup. Verify recovery UI and first post-erase creation. Core mocks are not OS service evidence.
 
 These gaps keep #15 open; this PR is not TestFlight or release-readiness approval.
+
+## Simulator follow-up — 20 September 2026
+
+**Tested implementation:** `05d343f4b63a0ff195fa1a9c72d8301858b6d2bc`, based on merged PR #48 (`79e641b09786df711e44871214bea1642f68a39a`). The production view and fixture helper were byte-compared with the compiled source copy. The user authorized Simulator testing and said the phone would remain disconnected; physical iPhone recovery is still deferred, not completed.
+
+Used the project's previously tested, existing **iPhone 17 Pro / iOS 26.5**, UDID `A846DE14-5BB1-4F7E-9EEC-D4310CEB07F6`. It was initially shut down and booted for this run. No other Simulator was selected, and no device/runtime was created, deleted, reset, replaced or installed. Xcode **27.0 (27A266a)** built the isolated app/widget with ad hoc signing. The product's open Xcode project was also reopened with its existing **Any iOS Device (arm64)** destination preserved; Build showed **Build Succeeded at 16:50**.
+
+`scripts/validate_privacy_simulator.py` requires an explicit, already booted UDID and refuses unavailable/unbooted input instead of choosing or starting another device. It builds a temporary source copy with unique `.Validation15.<run>` app/widget IDs, a separate App Group and a separate URL scheme. `PrivacyValidation.swift` calls the production application models inside that process using only synthetic fixture plans. The helper is outside product source membership and is injected only into the temporary project. The user's exported JSON is never loaded by this test.
+
+The first run reproduced stale restore state: after a bad file, selecting a valid backup left the previous error visible. `prepareRestore` now clears its old error and preview before validating each newly selected file. A bad selection cannot leave a previously valid backup ready to restore. [Before-fix result](issue-15/simulator-before-fix.json) records the reproduced failure; [after-fix result](issue-15/simulator-after-fix.json) records **31 passing native model/service checks**.
+
+| Executed check | Result |
+| --- | --- |
+| Export and share callbacks | JSON includes archived plans and full/light/skipped records; CSV escaping/formula protection passes. Cancellation, simulated share-error callbacks and dismissal after SwiftUI clears the binding remove staged exports; store bytes remain unchanged. These are callback tests, not actual share-sheet interaction. |
+| Restore preparation and retry | Counts validate; discarding a preview preserves data; populated storage refuses restore; invalid JSON clears the prior preview and preserves data; the next valid file clears the obsolete error. |
+| Actual iOS cleanup hooks | Erase completed through the real Simulator notification client and Core Spotlight deletion API. Saved reminder preferences, setup defaults/draft, diagnostic report, main document and both migration backups were removed. The lifecycle barrier completed, stable lock inode survived, and cached app data/Undo cleared. |
+| Notification scope | Actual Simulator pending/delivered queues were empty after cleanup. No notification authorization was requested and no delivery is inferred; pre-populated OS queue or search-index deletion still needs separate evidence. |
+| Stale work and recovery | Old store and onboarding draft writes were rejected. Restore repopulated the empty fixture through the production API; every saved model field matched the validated backup and the app model showed all three fixture plans. |
+| Cold launch | Terminate/relaunch without the validation flag succeeded and retained identical restored store bytes. |
+| Isolation and cleanup | The existing product's routine document, lifecycle and known migration-backup hashes were unchanged. Both agent-created test apps were removed after collecting results; the selected Simulator remains available. |
+| Project consistency | Generation/check and whitespace checks passed. No generated production project change was needed. |
+
+Reproduction, after selecting and booting the intended existing Simulator yourself:
+
+```sh
+python3 scripts/validate_privacy_simulator.py --device <existing-booted-simulator-udid>
+```
+
+The runner prints its temporary build log, result and manifest locations. It removes only its uniquely named test app, never the product app or a Simulator. The earlier 131 core-test/4 generator-test results remain recorded above; they are not represented as rerun during this app-only correction.
+
+**UI limitation:** Device Hub accessibility access repeatedly timed out even after successful Simulator boot. No synthetic UI events were used as a substitute. The native typed-ERASE screen, actual picker/share sheet, visual appearance, accessibility and post-erase widget rendering remain unverified. This follow-up establishes application-model/OS-service behaviour and persistence, not those UI acceptance criteria. #15 remains open.
