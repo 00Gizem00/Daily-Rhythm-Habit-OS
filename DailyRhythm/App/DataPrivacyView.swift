@@ -143,6 +143,7 @@ final class DataPrivacyModel: ObservableObject {
             try await clearSearchIndex()
             #endif
             setup.clearForErasure()
+            UserDefaults.standard.removeObject(forKey: "dailyRhythm.completionHaptics")
             try removeIfPresent(exportDirectory)
             let documents = URL.documentsDirectory
             for url in try FileManager.default.contentsOfDirectory(at: documents, includingPropertiesForKeys: nil) {

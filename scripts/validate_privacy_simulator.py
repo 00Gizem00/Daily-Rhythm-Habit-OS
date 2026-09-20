@@ -50,6 +50,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--device", required=True, help="Existing booted Simulator UDID; no automatic selection")
     parser.add_argument("--suite", choices=["privacy", "accessibility", "diagnostics"], default="privacy")
+    parser.add_argument("--configuration", choices=["Debug", "Release"], default="Debug")
     args = parser.parse_args()
     issue, helper = {"privacy": (15, "PrivacyValidation"), "accessibility": (16, "AccessibilityValidation"),
                      "diagnostics": (20, "PilotValidation")}[args.suite]
@@ -67,7 +68,7 @@ def main():
     bundle = PRODUCT + f".Validation{issue}." + suffix
     manifest = {"sourceCommit": command("git", "rev-parse", "HEAD", cwd=ROOT),
                 "device": args.device, "deviceName": device["name"], "runtime": runtime,
-                "suite": args.suite, "bundle": bundle, "output": str(output),
+                "suite": args.suite, "configuration": args.configuration, "bundle": bundle, "output": str(output),
                 "sourceChanges": command("git", "status", "--porcelain", cwd=ROOT)}
     original_group = group_path(args.device, PRODUCT)
     original_hashes = store_hashes(original_group)
@@ -96,11 +97,11 @@ def main():
         print("Building isolated app and widget…", flush=True)
         with (output / "build.log").open("w") as log:
             subprocess.run(["xcodebuild", "-project", str(fixture / "DailyRhythm.xcodeproj"),
-                            "-scheme", "DailyRhythm", "-configuration", "Debug", "-sdk", "iphonesimulator",
+                            "-scheme", "DailyRhythm", "-configuration", args.configuration, "-sdk", "iphonesimulator",
                             "-destination", "id=" + args.device, "-derivedDataPath", str(output / "DerivedData"),
                             "CODE_SIGNING_ALLOWED=YES", "CODE_SIGN_IDENTITY=-", "build"],
                            stdout=log, stderr=subprocess.STDOUT, check=True)
-        product = output / "DerivedData/Build/Products/Debug-iphonesimulator/DailyRhythm.app"
+        product = output / f"DerivedData/Build/Products/{args.configuration}-iphonesimulator/DailyRhythm.app"
         command("codesign", "--verify", "--deep", "--strict", str(product))
         command("xcrun", "simctl", "install", args.device, str(product))
         installed = True
