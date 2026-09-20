@@ -20,7 +20,7 @@
 
 The archive was built after the final production-source commit. Subsequent repository changes contain documentation/evidence only. Binary hashes, matching dSYMs, intent names and profile-expiry summaries are in [archive inspection](issue-21/archive-inspection.json). Provisioning profiles and signed binaries stay in the local ignored artifact directory; private device lists/certificates are not copied to the repository. The older local archive without the support link is retained under `superseded-before-support-link` and is not this candidate.
 
-Only development identities were available in the local signing inventory. This does not prove whether cloud-managed distribution signing is available to the account. App Store Connect app-record/build availability, distribution validation, processing and beta review were not attempted or represented as passed.
+Only development identities were available in the local signing inventory. This does not prove whether cloud-managed distribution signing is available to the account. App Store Connect was not checked during the archive run. The later registration check is recorded below and in the [release runbook](../release/README.md); distribution validation, processing and beta review remain unverified.
 
 ## Changes
 
@@ -82,7 +82,7 @@ python3 scripts/inspect_release_archive.py /tmp/DailyRhythm-review.xcarchive
 | Diagnostics (#20) | Earlier 148 core/27 native diagnostics checks and new upgrade preservation pass. Real opt-in/export UI, system input dispatch and actual 7/14-day observation remain open. |
 | Deployment coverage | iOS 18 minimum and iPad support are compiled, but this candidate was exercised only on the existing iOS 26.5 iPhone Simulator. No alternate Simulator was selected. Supported-device/version matrix still needs approved execution. |
 | Screenshots | Device Hub returned timeout `-10005` again. No candidate screenshot or UI pass was fabricated from a render or an earlier build. Capture real screenshots with synthetic data after access works. |
-| Distribution/account | App Store Connect record, unique build number, distribution signing, export compliance, validation/processing and beta review unverified. No upload authorized/performed in this task. |
+| Distribution/account | On 20 September 2026, created owner-selected **Daily Rhythm: Habit OS**, Apple ID **6814232930**, in LumeTech. Saved App Information confirmed bundle/SKU `com.lumetechllc.DailyRhythm` and English (U.S.). iOS storefront draft is **1.0 / Prepare for Submission**; TestFlight visibly shows **No Builds**. Recheck build-number availability at upload time. Distribution signing, export compliance, validation/processing and beta review remain unverified; no upload/distribution performed. |
 | Public information | Support email confirmed: Contact@lumetechllc.com. [Support/privacy HTML previews](../release/web-preview/README.md) prepared and browser-checked; optional app diagnostics and automatic TestFlight collection are explicitly distinguished. These are unpublished drafts. Owner-selected support/privacy URLs, legal-policy confirmation, private review contact and actual report-retention/destination policy still needed. |
 | CI | Previous workflow runs failed to start due to the account billing lock. The PR records its own fresh run; local results are not a green CI claim. |
 | Pilot outcome | Protocol/templates ready; no testers recruited, no day-7/day-14 observations or findings yet. Link actual findings to the decision before closing #21. |

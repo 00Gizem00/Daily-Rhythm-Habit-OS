@@ -2,6 +2,10 @@
 
 **HOLD: prepared locally, not approved for upload or distribution.** This directory is a review packet for issue #21, not evidence of an active pilot. No build has been uploaded and no testers have been contacted by this task.
 
+**App Store Connect record created on 20 September 2026:** [Daily Rhythm: Habit OS — 6814232930](https://appstoreconnect.apple.com/apps/6814232930/distribution/info), under LumeTech L.L.C. The owner selected this name after Apple rejected “Daily Rhythm” as unavailable. Saved App Information confirms iOS, English (U.S.), bundle ID and SKU `com.lumetechllc.DailyRhythm`. Reuse this record; do not create another app or change the native bundle/group identities.
+
+The new record shows **1.0 / Prepare for Submission** and TestFlight shows **No Builds**. The default storefront draft is separate from the local **0.1.0 (2)** beta candidate; no binary/version was changed or uploaded. Before any future App Review submission, review the untouched default sign-in-required and automatic-release selections against the actual no-login app and the owner's release decision. App creation alone does not complete metadata, privacy, export compliance or distribution signing.
+
 - [Candidate evidence and release gates](../verification/ISSUE-21-RELEASE-CANDIDATE.md)
 - [Release notes and App Store Connect copy](RELEASE-NOTES.md)
 - [14-day pilot protocol](PILOT-PROTOCOL.md)
@@ -13,7 +17,7 @@
 ## Upload and distribution runbook
 
 1. Resolve the open candidate matrix, with actual build/device evidence. Optional schema Siri and PCC are excluded; they alone do not block the manual beta. Current data, upgrade, accessibility, notification and surface checks do.
-2. Confirm the App Store Connect record belongs to LumeTech, bundle `com.lumetechllc.DailyRhythm`, and that build **2** is unused for version **0.1.0**. The local increment is not a reservation in App Store Connect. Keep app and extension versions aligned; change the generator if another increment is needed.
+2. Reuse App Store Connect record **6814232930** above. Recheck the LumeTech provider, bundle `com.lumetechllc.DailyRhythm`, and that build **2** is unused for version **0.1.0** at upload time. TestFlight showed no builds at registration; the local increment is not a reservation. Keep app and extension versions aligned; change the generator if another increment is needed. Reconcile the storefront draft version when preparing public submission instead of treating its default 1.0 as the beta binary's version.
 3. Confirm the public support/privacy destinations, beta feedback email and private App Review contact. Review the actual support/diagnostic handling before completing App Privacy answers. Do not claim that voluntarily received reports contain no data. Complete encryption questions based on the final binary; no encryption declaration was submitted here. Apple requires beta compliance information before testing. [Apple export compliance](https://developer.apple.com/help/app-store-connect/test-a-beta-version/provide-export-compliance-information-for-beta-builds)
 4. From a clean, recorded source commit, generate/check the project, run the release tests and create a Release archive with the ordinary scheme and no experimental Swift flags. Keep its dSYMs and record binary hashes. Run `python3 scripts/inspect_release_archive.py <archive>`; this verifies local packaging only.
 5. In Xcode Organizer, review the archive and validate its App Store Connect distribution signing. The local candidate is development-signed; App Store distribution signing/export has not been verified. Do not alter signing-team or App Group identities to get past a provisioning failure.
