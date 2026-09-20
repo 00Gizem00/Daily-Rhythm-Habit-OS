@@ -28,7 +28,7 @@ Requirements: **Xcode 16 or later**, Swift 6 and an iOS 18+ simulator or device.
 
 1. Open `DailyRhythm.xcodeproj`.
 2. Select the **DailyRhythm** scheme and an iPhone simulator.
-3. For a physical device, select your development team for both app and widget targets. Register the App Group `group.com.lumetechllc.DailyRhythm` and explicitly assign it to **both** `com.lumetechllc.DailyRhythm` and `com.lumetechllc.DailyRhythm.Widgets` in Apple Developer. Enabling the App Groups capability alone is insufficient: each App ID must have this group selected, and its development profile must be regenerated after assignment. If you change the group, update the project's `APP_GROUP_IDENTIFIER` build setting too.
+3. Physical-device signing defaults to **LumeTech L.L.C. (`U54BLJMYG6`)**, the team that owns both bundle IDs and the App Group. The app, widget and schema tests inherit that team from the project; the project generator preserves it. Use an Xcode account with access to this team. For a fork using another team, update `DEVELOPMENT_TEAM` and the identifiers in `scripts/generate_project.py`, then register the App Group and assign it to both app IDs in Apple Developer. Enabling App Groups alone is insufficient: both profiles must contain the assigned group. The current group is `group.com.lumetechllc.DailyRhythm`; bundle IDs are `com.lumetechllc.DailyRhythm` and `com.lumetechllc.DailyRhythm.Widgets`.
 4. Run the app, add a habit, then add a Daily Rhythm widget to the Home Screen.
 
 The app intentionally reports a storage error if the App Group cannot be opened. It never silently creates a second store that diverges from the widget.
@@ -65,7 +65,7 @@ xcrun simctl launch "$RHYTHM_SIMULATOR_UDID" com.lumetechllc.DailyRhythm
 
 In the app, create a habit, terminate the app with `xcrun simctl terminate "$RHYTHM_SIMULATOR_UDID" com.lumetechllc.DailyRhythm`, then launch it again and verify the same habit remains. Do not substitute a direct write to the store for this UI check. Simulator signing does not validate physical-device provisioning.
 
-The Xcode project is checked in. After adding or removing Swift source files, run `python3 scripts/generate_project.py`. CI checks the generated project, runs the core tests and builds both targets. Personal signing edits may need to be reapplied after regeneration.
+The Xcode project is checked in. After adding or removing Swift source files, run `python3 scripts/generate_project.py`. CI checks the generated project, runs the core tests and builds both targets. Make durable signing-setting changes in the generator so regeneration retains them.
 
 ## Next milestones
 

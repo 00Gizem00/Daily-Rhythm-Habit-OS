@@ -92,6 +92,9 @@ def generate():
         "CLANG_WARN_UNREACHABLE_CODE": "YES",
         "CLANG_WARN__DUPLICATE_METHOD_MATCH": "YES",
         "CODE_SIGN_STYLE": "Automatic",
+        # LumeTech owns both bundle IDs and the shared App Group. Keep all targets
+        # on this team when regenerating the project after source changes.
+        "DEVELOPMENT_TEAM": "U54BLJMYG6",
         "CURRENT_PROJECT_VERSION": "1",
         "IPHONEOS_DEPLOYMENT_TARGET": "18.0",
         "MARKETING_VERSION": "0.1.0",
