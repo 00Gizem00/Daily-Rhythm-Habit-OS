@@ -56,6 +56,65 @@ An unsigned Simulator build does not verify signing, App Group provisioning, Sir
 - Test after locking/unlocking, across midnight, after a timezone change and with a stale widget.
 - Test VoiceOver, large Dynamic Type and Reduce Motion.
 
-The current developer environment is Linux without Xcode or Swift. Local project-generation consistency, plist/XML parsing and whitespace checks passed. Fourteen core tests are written but have not run.
+The initial implementation was produced on Linux without Xcode or Swift. Its project-generation consistency, plist/XML parsing and whitespace checks passed, but its fourteen written core tests and native build were not executed there. The Mac verification below supersedes that native-validation status.
 
-The [first GitHub Actions run](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/actions/runs/35479213534) stopped before allocating a runner or executing any step. GitHub reports: "The job was not started because your account is locked due to a billing issue." Consequently, there is no Swift test result or Xcode build result yet. Resolve the account issue and rerun the workflow, or use the Mac commands in the README. Native compilation and the device checks above remain release gates.
+### Issue #3 native validation — 20 September 2026
+
+Tracking: [#3](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/issues/3), the first item in [the delivery roadmap](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/issues/2).
+
+**Tested source commit:** `3202d911b205afc0f7257df56207340368c0a071` (merged PR #1). `git fetch origin` confirmed that `HEAD` and the latest `origin/main` both pointed to this commit before verification. No application, package, project-generator or generated-project source changes were needed for the tests or compilation. This validation branch only updates evidence/documentation.
+
+| Environment | Recorded value |
+| --- | --- |
+| Host | Apple Silicon, macOS 27.0 (`26A428`) |
+| Xcode | 27.0, build `27A266a` |
+| Swift | Apple Swift 6.4 (`swiftlang-6.4.0.34.1`, `clang-2100.3.34.1`); Swift 6 language mode |
+| Simulator build SDK | iOS Simulator 27.0 (`24A430`) |
+| Deployment target | iOS 18.0 |
+| Build configuration | Debug, unsigned, generic iOS Simulator; arm64 and x86_64 |
+| Local run time | 20 September 2026, approximately 05:27 Europe/Istanbul (02:27 UTC) |
+
+Commands run from the repository root:
+
+```sh
+git fetch origin
+git rev-parse HEAD origin/main
+sw_vers
+xcodebuild -version
+swift --version
+xcodebuild -showsdks
+swift test --package-path Packages/DailyRhythmCore
+xcodebuild -project DailyRhythm.xcodeproj -scheme DailyRhythm \
+  -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath /tmp/daily-rhythm-issue-3/DerivedData \
+  CODE_SIGNING_ALLOWED=NO build
+python3 scripts/generate_project.py --check
+git diff --check
+```
+
+`-derivedDataPath` only controls the location of build artifacts; the build otherwise uses the README command. A generic build destination does not select, boot or modify a Simulator device.
+
+| Check | Actual result |
+| --- | --- |
+| Existing core tests | **Passed:** 14 XCTest cases executed, zero failures, 0.089 seconds reported for the suite; command exited 0. The trailing Swift Testing runner reported zero tests because these tests use XCTest. |
+| App and widget compilation | **Passed:** `DailyRhythm` and `DailyRhythmWidgets` compiled and linked for both Simulator architectures, the widget was embedded and validated, and `xcodebuild` ended with `BUILD SUCCEEDED`, exit 0. |
+| Deterministic project | **Passed:** `Xcode project is up to date.`, exit 0; no regeneration necessary. |
+| Whitespace check | **Passed:** `git diff --check`, exit 0. |
+| Launch, create a habit, terminate and relaunch | **Pending:** awaiting selection of an existing Simulator. Two devices were already booted; repository instructions prohibit automatically choosing another Simulator. No habit has been inserted directly into a store to substitute for this check. |
+
+The core test run exercised recurrence, rollover/DST, timezone travel, duplicate completion, undo, full/light outcomes, archive history, fresh-store reload, invalid/corrupt/unsupported data preservation and concurrent independent stores. No compiler or test failure required a source fix or a new regression test.
+
+The successful build did emit this diagnostic from `AppIntentsSSUTraining`:
+
+```text
+appintentsnltrainingprocessor: error: Could not archive SSU artifacts. Check build log.
+** BUILD SUCCEEDED **
+```
+
+`ExtractAppIntentsMetadata` wrote `Metadata.appintents`; SSU YAML generation and copying also completed before the archive diagnostic. The build log provides no more specific failure cause. Record this as an unresolved tooling diagnostic, not proof of working Siri recognition or a clean App Shortcuts training result. Recheck discovery and invocation during [#4](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/issues/4). No build setting was changed to suppress the diagnostic.
+
+Local raw logs from this run are `/tmp/daily-rhythm-issue-3/swift-test.log` and `/tmp/daily-rhythm-issue-3/xcodebuild.log`. These are temporary local artifacts; the commands, environment, commit and outcomes above are the durable evidence.
+
+**CI status checked on 20 September 2026:** the [first GitHub Actions run](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/actions/runs/35479213534), for commit `b54ccc6cf26b5752390d56c9924671b57862646f`, remains `completed` / `failure`. The GitHub API returned no executed job steps, and the check annotation still says: "The job was not started because your account is locked due to a billing issue." This historical run is not a green CI result. Local Mac execution is the verification path allowed by #3; no billing changes were made.
+
+**Closure:** keep #3 open and use `Refs #3` until a real UI-created habit is shown to survive process termination and relaunch. Physical-device signing, App Group provisioning, cross-surface writes, locked-device behaviour, Siri invocation and widget refresh are still unverified and belong to #4 and the later release gates above.
