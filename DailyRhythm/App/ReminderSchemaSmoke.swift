@@ -76,6 +76,7 @@ enum ReminderSchemaSmoke {
             // Reversible cleanup through the normal API, scoped to this newly created test item.
             try store.archive(habitID: created.habitID)
             RhythmSurfaceRefresh.reload()
+            await ReminderSchemaIndex.shared.refreshAfterMutation()
             report["testItemArchived"] = true
             let oldIDs = Set(before.map(\.id))
             guard try store.habits(includeArchived: true).filter({ oldIDs.contains($0.id) }) == before,
@@ -89,6 +90,7 @@ enum ReminderSchemaSmoke {
                 do {
                     try SharedRoutineStore.makeStore().archive(habitID: testHabitID)
                     RhythmSurfaceRefresh.reload()
+                    await ReminderSchemaIndex.shared.refreshAfterMutation()
                     report["testItemArchived"] = true
                 }
                 catch { report["cleanupError"] = error.localizedDescription }
@@ -103,5 +105,31 @@ enum ReminderSchemaSmoke {
 private enum SmokeFailure: LocalizedError {
     case failed(String)
     var errorDescription: String? { switch self { case .failed(let message): message } }
+}
+
+/// Reversible, fixture-scoped teardown for AppIntentsTesting. Never resets the store.
+@available(iOS 27.0, *)
+struct ArchiveSchemaDispatchTestIntent: AppIntent {
+    static let title: LocalizedStringResource = "Archive Schema Dispatch Test"
+    static let isDiscoverable = false
+    @Parameter(title: "Test Run ID") var runID: String
+
+    func perform() async throws -> some IntentResult {
+        guard let id = UUID(uuidString: runID), id.uuidString == runID else { throw ReminderMappingError.unsupportedItem }
+        let store = try SharedRoutineStore.makeStore()
+        let fixtures = try store.habits(includeArchived: true).filter {
+            $0.title == "Schema dispatch \(runID)" && !$0.recurrence.isRecurring
+        }
+        guard fixtures.count <= 1 else { throw ReminderMappingError.unsupportedItem }
+        for fixture in fixtures where fixture.archivedAt == nil {
+            for step in try store.managedOccurrences(habitID: fixture.id) where step.isResolved {
+                try store.reopen(occurrenceID: step.id, expectedRevision: step.revision)
+            }
+            try store.archive(habitID: fixture.id)
+        }
+        RhythmSurfaceRefresh.reload()
+        await ReminderSchemaIndex.shared.refreshAfterMutation()
+        return .result()
+    }
 }
 #endif

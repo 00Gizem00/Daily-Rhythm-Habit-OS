@@ -120,6 +120,9 @@ final class AppModel: ObservableObject {
             try action()
             operationError = nil
             RhythmSurfaceRefresh.reload()
+            #if DAILY_RHYTHM_SCHEMA_SPIKE && compiler(>=6.4)
+            if #available(iOS 27.0, *) { Task { await ReminderSchemaIndex.shared.refreshAfterMutation() } }
+            #endif
             refresh()
             return true
         } catch {

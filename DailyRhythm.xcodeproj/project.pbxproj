@@ -65,6 +65,12 @@
 			"path" = "DailyRhythm/App/OnboardingView.swift";
 			"sourceTree" = "<group>";
 		};
+		"A7DA5C6FDDB37A7628EC27C4" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "DailyRhythm/App/ReminderSchemaIndex.swift";
+			"sourceTree" = "<group>";
+		};
 		"553D21358C2000E7D2D8CBD3" = {
 			"isa" = "PBXFileReference";
 			"lastKnownFileType" = "sourcecode.swift";
@@ -125,6 +131,12 @@
 			"path" = "DailyRhythm/Shared/SharedRoutineStore.swift";
 			"sourceTree" = "<group>";
 		};
+		"A3849D3F517159EEAE7F5C65" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "DailyRhythmSchemaTests/SchemaDispatchTests.swift";
+			"sourceTree" = "<group>";
+		};
 		"10FA34F021C4DAE3C018E3F7" = {
 			"isa" = "PBXFileReference";
 			"lastKnownFileType" = "sourcecode.swift";
@@ -157,11 +169,19 @@
 			"path" = "DailyRhythmWidgets.appex";
 			"sourceTree" = "BUILT_PRODUCTS_DIR";
 		};
+		"3BC8C52A4BF6E7EF5795BDA8" = {
+			"isa" = "PBXFileReference";
+			"explicitFileType" = "wrapper.cfbundle";
+			"includeInIndex" = 0;
+			"path" = "DailyRhythmSchemaTests.xctest";
+			"sourceTree" = "BUILT_PRODUCTS_DIR";
+		};
 		"00C45FD35CB0F9C5F764F070" = {
 			"isa" = "PBXGroup";
 			"children" = (
 				"B6CDB6E5D160E013280D3C68",
 				"4C47665D1BA4105DF9684DC4",
+				"3BC8C52A4BF6E7EF5795BDA8",
 			);
 			"name" = "Products";
 			"sourceTree" = "<group>";
@@ -179,6 +199,7 @@
 				"CDD844629F73EDDB8CBA552B",
 				"0393699B7688D3A4D0A4D7CD",
 				"F33532D8794106084FA90CF7",
+				"A7DA5C6FDDB37A7628EC27C4",
 				"553D21358C2000E7D2D8CBD3",
 				"2F96191F43AE56B6881F8A46",
 				"FBF7983180D06C9418762A45",
@@ -189,6 +210,7 @@
 				"E690C7E94419F4BCE76FD5AA",
 				"CD8DDFE7AA5D742A41201473",
 				"6CC10E2E896DBD4EFB6D1545",
+				"A3849D3F517159EEAE7F5C65",
 				"10FA34F021C4DAE3C018E3F7",
 				"04C8B4C0515FB7E7C907B3AF",
 				"730238439602493911E6A54F",
@@ -289,6 +311,10 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "F33532D8794106084FA90CF7";
 		};
+		"AD16B0B62DB1915EE73A8A24" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "A7DA5C6FDDB37A7628EC27C4";
+		};
 		"22878BDE017C62F13B8D62A5" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "553D21358C2000E7D2D8CBD3";
@@ -343,6 +369,7 @@
 				"C826A589ADF69312A27C49C0",
 				"A35AEEA4C0A58AB2A6961667",
 				"B7AA025ADA0B52F49D55D5E3",
+				"AD16B0B62DB1915EE73A8A24",
 				"22878BDE017C62F13B8D62A5",
 				"D9D9AE395E29F748CDD008B5",
 				"A345F0E1148104BBEAE960BC",
@@ -627,6 +654,103 @@
 			"productReference" = "4C47665D1BA4105DF9684DC4";
 			"productType" = "com.apple.product-type.app-extension";
 		};
+		"80F9FE73EC0D402D9658FA9F" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "A3849D3F517159EEAE7F5C65";
+		};
+		"2B391361F6776264B5640615" = {
+			"isa" = "PBXSourcesBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = (
+				"80F9FE73EC0D402D9658FA9F",
+			);
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"660F9D3634BF66738D1F529A" = {
+			"isa" = "PBXFrameworksBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = (
+			);
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"CE7C9E248C0D84BC003318FD" = {
+			"isa" = "PBXContainerItemProxy";
+			"containerPortal" = "98F54143AB4E86B28C3AFEE0";
+			"proxyType" = 1;
+			"remoteGlobalIDString" = "29C7B681C8D62CBAC94D51C0";
+			"remoteInfo" = "DailyRhythm";
+		};
+		"13B97D98C79DB286D2A819FF" = {
+			"isa" = "PBXTargetDependency";
+			"target" = "29C7B681C8D62CBAC94D51C0";
+			"targetProxy" = "CE7C9E248C0D84BC003318FD";
+		};
+		"1B24FC2067592598FD7685DD" = {
+			"isa" = "XCBuildConfiguration";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "$(TARGET_NAME)";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.lumetechllc.DailyRhythm.SchemaTests";
+				"GENERATE_INFOPLIST_FILE" = "YES";
+				"TEST_TARGET_NAME" = "DailyRhythm";
+				"IPHONEOS_DEPLOYMENT_TARGET" = "27.0";
+				"SKIP_INSTALL" = "YES";
+				"LD_RUNPATH_SEARCH_PATHS" = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"SWIFT_OPTIMIZATION_LEVEL" = "-Onone";
+				"DEBUG_INFORMATION_FORMAT" = "dwarf";
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "$(inherited) DEBUG";
+				"ENABLE_TESTABILITY" = "YES";
+			};
+			"name" = "Debug";
+		};
+		"7C166028A41F958D67715266" = {
+			"isa" = "XCBuildConfiguration";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "$(TARGET_NAME)";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.lumetechllc.DailyRhythm.SchemaTests";
+				"GENERATE_INFOPLIST_FILE" = "YES";
+				"TEST_TARGET_NAME" = "DailyRhythm";
+				"IPHONEOS_DEPLOYMENT_TARGET" = "27.0";
+				"SKIP_INSTALL" = "YES";
+				"LD_RUNPATH_SEARCH_PATHS" = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				"SWIFT_OPTIMIZATION_LEVEL" = "-O";
+				"DEBUG_INFORMATION_FORMAT" = "dwarf-with-dsym";
+			};
+			"name" = "Release";
+		};
+		"F2A5EBC33E9E0DC45BC21826" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = (
+				"1B24FC2067592598FD7685DD",
+				"7C166028A41F958D67715266",
+			);
+			"defaultConfigurationIsVisible" = 0;
+			"defaultConfigurationName" = "Release";
+		};
+		"3725AC9D9E20F995764FDBED" = {
+			"isa" = "PBXNativeTarget";
+			"buildConfigurationList" = "F2A5EBC33E9E0DC45BC21826";
+			"buildPhases" = (
+				"2B391361F6776264B5640615",
+				"660F9D3634BF66738D1F529A",
+			);
+			"buildRules" = (
+			);
+			"dependencies" = (
+				"13B97D98C79DB286D2A819FF",
+			);
+			"name" = "DailyRhythmSchemaTests";
+			"productName" = "DailyRhythmSchemaTests";
+			"productReference" = "3BC8C52A4BF6E7EF5795BDA8";
+			"productType" = "com.apple.product-type.bundle.ui-testing";
+		};
 		"98F54143AB4E86B28C3AFEE0" = {
 			"isa" = "PBXProject";
 			"attributes" = {
@@ -638,6 +762,9 @@
 						"CreatedOnToolsVersion" = "16.0";
 					};
 					"A5A0AA9F4FB5BC8D9254438A" = {
+						"CreatedOnToolsVersion" = "16.0";
+					};
+					"3725AC9D9E20F995764FDBED" = {
 						"CreatedOnToolsVersion" = "16.0";
 					};
 				};
@@ -660,6 +787,7 @@
 			"targets" = (
 				"29C7B681C8D62CBAC94D51C0",
 				"A5A0AA9F4FB5BC8D9254438A",
+				"3725AC9D9E20F995764FDBED",
 			);
 		};
 	};
