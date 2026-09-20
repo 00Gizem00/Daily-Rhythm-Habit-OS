@@ -4,7 +4,7 @@ Tracking: [#10](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/issues/10). [
 
 **Initial tested implementation:** `12ccb3f2138a9dccbda3f0d753120dbc338121af`, based on merged PR #38 (`0b79f86`). **System-dispatch/indexing follow-up:** `aaed43a`, based on merged PR #40 (`189179a`). The initial adapter evidence below is preserved; the follow-up is recorded separately.
 
-**Status: SDK, native adapter and unlocked system-dispatch checks pass. Real Siri creation and completion are user-confirmed; Siri reopen and lock/authentication gates remain open.** Use **Refs #10**. The default product build excludes the experimental schemas; production #11 must not infer Siri availability from compilation or direct `perform()` calls.
+**Status: SDK, native adapter and unlocked system-dispatch checks pass. Real Siri create/complete/reopen are user-confirmed; region and lock/authentication gates remain open.** Use **Refs #10**. The default product build excludes the experimental schemas; production #11 must not infer Siri availability from compilation or direct `perform()` calls.
 
 ## Actual environment
 
@@ -74,7 +74,7 @@ Same phone/OS/toolchain, 20 September 2026. The user explicitly confirmed **Siri
 | User-reported ordinary launch closure | User reported that the app also closed when opened normally. App process remained present, app-specific crash-log searches returned zero files, and no same-day Jetsam event appeared. These observations do not disprove an earlier crash. |
 | Controlled cold launch of the previously installed build | `devicectl --terminate-existing --console` launched successfully and remained running; user confirmed **Today stayed open**. Closure did not reproduce in this attempt. No crash fix is claimed. The test runner taking foreground is a possible explanation, not a confirmed diagnosis. |
 | Siri completion after indexing | User retried the same “Mark Rhythm Probe as completed in Daily Rhythm” phrase and confirmed **Siri completed it and the task appeared completed in the app**. |
-| Siri reopen after indexing | Retest requested; no result recorded yet. |
+| “Reopen Rhythm Probe in Daily Rhythm” after indexing | User confirmed the task **returned to not completed in the app**. The actual Siri create → complete → reopen sequence now passes on this configured device. |
 
 Investigation found the opt-in reminder entity was not donated to Spotlight. The follow-up indexes active one-offs, refreshes pre-existing content on foreground entry, removes archived IDs and excludes archived tasks from resolution/update. A separate out-of-process test reproduced rejection of explicit `isFlagged: false`; the adapter now accepts nil/false and still rejects true before creating a task. Neither finding is presented as a proven cause of the earlier app closure.
 
@@ -94,8 +94,8 @@ Local evidence is under `/tmp/daily-rhythm-siri-investigation/`: `core-tests.log
 Required before closing #10 or promoting #11:
 
 1. Confirm device region. Siri AI Beta and English are user-reported, and explicit-app Siri creation is demonstrated by the user-confirmed app result.
-2. Finish actual Siri **reopen** with an explicit app name and verify the saved app result. The corresponding unlocked system-dispatch sequence already passes; it does not substitute for Siri recognition.
+2. Keep the scope of the demonstrated Siri result explicit: named-app create (without an explicit due date), complete and reopen on this configured phone. Broader date/ambiguous/generic routing is not inferred from that result.
 3. Exercise lock/authentication behaviour. Direct method calls do not validate `requiresLocalDeviceAuthentication` or background system execution.
 4. Record truthful unsupported/ambiguous routing results and the unresolved SSU training diagnostic's effect, if any.
 
-Device Hub UI automation still returns `-10005: timeoutReached` in this task; no alternative UI-event injection was used. AppIntentsTesting covers out-of-process framework dispatch, and user-assisted checks cover actual Siri. Generic reminder routing, reopen recognition and lock behavior are not marked passed, and no production schema flag is enabled. The reported closure remains unconfirmed pending another reproducible event or crash report.
+Device Hub UI automation still returns `-10005: timeoutReached` in this task; no alternative UI-event injection was used. AppIntentsTesting covers out-of-process framework dispatch, and user-assisted checks cover actual Siri. Generic reminder routing and lock behavior are not marked passed, and no production schema flag is enabled. The reported closure remains unconfirmed pending another reproducible event or crash report.
