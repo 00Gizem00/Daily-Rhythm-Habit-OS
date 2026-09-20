@@ -5,7 +5,7 @@ struct TodayView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var setup: OnboardingPreferences
     @State private var showingSetup = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var creationRoute: HabitCreationRoute?
 
     var body: some View {
@@ -37,7 +37,7 @@ struct TodayView: View {
                         let carryovers = items.filter { $0.dayKey != today.dayKey }
                         if !carryovers.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
-                                Text("From earlier days").font(.headline)
+                                Text("From earlier days").font(.headline).accessibilityAddTraits(.isHeader)
                                 Text("These steps keep their original day in history and its progress count.")
                                     .font(.caption).foregroundStyle(RhythmTheme.muted)
                                 ForEach(carryovers) { OccurrenceRow(occurrence: $0) }
@@ -46,11 +46,15 @@ struct TodayView: View {
                         Text("Full, light and skipped steps are recorded separately. Skipping never counts as completing.")
                             .font(.footnote).foregroundStyle(RhythmTheme.muted)
                     }
-                    if model.lastUndo != nil {
-                        HStack {
-                            Label("Change saved", systemImage: "checkmark.circle")
-                            Spacer()
-                            Button("Undo") { model.undoLastAction() }.frame(minHeight: 44)
+                    if model.lastUndo != nil, let description = model.lastActionDescription {
+                        (dynamicTypeSize.isAccessibilitySize
+                         ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                         : AnyLayout(HStackLayout(spacing: 12))) {
+                            Text(description).fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Button("Undo") { model.undoLastAction() }.frame(minWidth: 44, minHeight: 44)
+                                .buttonStyle(RhythmInlineButtonStyle())
+                                .accessibilityLabel("Undo last change: \(description)")
                         }
                         .font(.subheadline)
                     }
@@ -71,8 +75,6 @@ struct TodayView: View {
             AddHabitView(readingTemplate: route == .reading)
         }
         .refreshable { await MainActor.run { model.refresh() } }
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: model.today?.completedCount)
-        .sensoryFeedback(.success, trigger: model.completionFeedback)
     }
 
     private var header: some View {
@@ -85,6 +87,7 @@ struct TodayView: View {
                     .font(.system(.largeTitle, design: .rounded, weight: .bold))
                     .foregroundStyle(RhythmTheme.ink)
                     .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
             }
             Spacer(minLength: 8)
             Button { creationRoute = .custom } label: {
@@ -135,14 +138,21 @@ struct TodayView: View {
 
     private func progress(_ summary: DailySummary) -> some View {
         RhythmCard {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 24) {
-                    RhythmProgressRing(full: summary.fullCount, light: summary.lightCount, planned: summary.totalCount)
-                    progressText(summary)
-                }
+            if dynamicTypeSize.isAccessibilitySize {
                 VStack(alignment: .leading, spacing: 20) {
                     RhythmProgressRing(full: summary.fullCount, light: summary.lightCount, planned: summary.totalCount)
                     progressText(summary)
+                }
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 24) {
+                        RhythmProgressRing(full: summary.fullCount, light: summary.lightCount, planned: summary.totalCount)
+                        progressText(summary)
+                    }
+                    VStack(alignment: .leading, spacing: 20) {
+                        RhythmProgressRing(full: summary.fullCount, light: summary.lightCount, planned: summary.totalCount)
+                        progressText(summary)
+                    }
                 }
             }
         }
@@ -179,6 +189,9 @@ struct TodayView: View {
                     .foregroundStyle(RhythmTheme.muted)
             }
             .padding(.horizontal, 4)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(part.displayName), \(items.filter(\.isCompleted).count) of \(items.count) steps completed")
+            .accessibilityAddTraits(.isHeader)
             VStack(spacing: 0) {
                 ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                     if index > 0 { Divider().padding(.horizontal, 18) }
@@ -192,14 +205,18 @@ struct TodayView: View {
 
 private struct NextUpCard: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let occurrence: DailyOccurrence
     @State private var editingOccurrence: DailyOccurrence?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            HStack {
+            (dynamicTypeSize.isAccessibilitySize
+             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+             : AnyLayout(HStackLayout(spacing: 12))) {
                 Text("NEXT UP").font(.caption.weight(.bold)).tracking(1.5)
-                Spacer()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityAddTraits(.isHeader)
                 Label(occurrence.dayPart.displayName, systemImage: occurrence.dayPart.symbol)
                     .font(.caption.weight(.medium))
             }
@@ -207,6 +224,7 @@ private struct NextUpCard: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(occurrence.title)
                     .font(.system(.title, design: .rounded, weight: .bold))
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(model.today?.isLightDay == true ? (occurrence.lightTarget ?? occurrence.normalTarget) : occurrence.normalTarget)
                     .font(.title3)
                     .foregroundStyle(RhythmTheme.muted)
@@ -221,8 +239,10 @@ private struct NextUpCard: View {
                     Label("Light step: \(light)", systemImage: "leaf")
                 }
                 .buttonStyle(RhythmPrimaryButtonStyle())
+                .accessibilityLabel("Complete \(occurrence.title), light goal: \(light)")
                 Button("Full step: \(occurrence.normalTarget)") { model.complete(occurrence, outcome: .full) }
                     .buttonStyle(RhythmSecondaryButtonStyle())
+                    .accessibilityLabel("Complete \(occurrence.title), full goal: \(occurrence.normalTarget)")
             } else {
                 Button { model.complete(occurrence, outcome: .full) } label: {
                     Label("Full step done", systemImage: "checkmark")
@@ -232,25 +252,37 @@ private struct NextUpCard: View {
                 if let light = occurrence.lightTarget {
                     Button("Light step: \(light)") { model.complete(occurrence, outcome: .light) }
                         .buttonStyle(RhythmSecondaryButtonStyle())
+                        .accessibilityLabel("Complete \(occurrence.title), light goal: \(light)")
                 } else if model.today?.isLightDay == true {
                     Text("No smaller target saved for this step.").font(.subheadline)
                     if occurrence.dayKey == model.today?.dayKey {
                         Button("Add a smaller target for this step") { editingOccurrence = occurrence }
                             .frame(minHeight: 44)
+                            .buttonStyle(RhythmInlineButtonStyle())
                     } else {
                         Text("Past targets stay in history. Edit the future plan to add a smaller target for upcoming days.")
                             .font(.caption).foregroundStyle(RhythmTheme.muted)
                     }
                 }
             }
-            HStack {
+            (dynamicTypeSize.isAccessibilitySize
+             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+             : AnyLayout(HStackLayout(spacing: 12))) {
                 Button("Later · 1 hour", systemImage: "clock") { model.later(occurrence) }
-                Spacer()
-                Button("Skip Today", systemImage: "forward.end") { model.skip(occurrence) }
+                    .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+                    .accessibilityLabel("Postpone \(occurrence.title) by one hour")
+                Button("Skip step", systemImage: "forward.end") { model.skip(occurrence) }
+                    .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+                    .accessibilityLabel("Skip \(occurrence.title)")
+                    .accessibilityHint("Records a skip for its original planned day. Does not count as completion.")
             }
-            .font(.subheadline).frame(minHeight: 44)
+            .font(.subheadline)
+            .buttonStyle(RhythmInlineButtonStyle())
             NavigationLink("Edit or manage this plan") { HabitDetailView(habitID: occurrence.habitID) }
                 .font(.subheadline)
+                .frame(minHeight: 44, alignment: .leading)
+                .buttonStyle(RhythmInlineButtonStyle())
+                .accessibilityLabel("Edit or manage \(occurrence.title)")
         }
         .sheet(item: $editingOccurrence) { OccurrenceEditor(occurrence: $0) }
         .padding(24)
@@ -264,32 +296,38 @@ private struct NextUpCard: View {
 
 private struct OccurrenceRow: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let occurrence: DailyOccurrence
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
+        (dynamicTypeSize.isAccessibilitySize
+         ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+         : AnyLayout(HStackLayout(alignment: .center, spacing: 12))) {
             Image(systemName: outcomeSymbol)
                 .font(.title3)
                 .foregroundStyle(outcomeColour)
                 .frame(width: 26)
                 .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 4) {
-                NavigationLink { HabitDetailView(habitID: occurrence.habitID) } label: {
+            NavigationLink { HabitDetailView(habitID: occurrence.habitID) } label: {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(occurrence.title).font(.body.weight(.medium))
+                    Text(outcomeDetail)
+                        .font(.caption)
+                        .foregroundStyle(RhythmTheme.muted)
+                    Text(RhythmDates.dueLabel(occurrence.due))
+                        .font(.caption2).foregroundStyle(RhythmTheme.muted)
                 }
-                .buttonStyle(.plain)
-                Text(outcomeDetail)
-                    .font(.caption)
-                    .foregroundStyle(RhythmTheme.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(RhythmDates.dueLabel(occurrence.due))
-                    .font(.caption2).foregroundStyle(RhythmTheme.muted)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             }
-            Spacer(minLength: 4)
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityHint("Opens plan details and editing.")
             if occurrence.outcome != nil {
                 Button("Reopen") { model.reopen(occurrence) }
                     .font(.caption.weight(.semibold))
                     .frame(minWidth: 44, minHeight: 44)
+                    .buttonStyle(RhythmInlineButtonStyle())
                     .accessibilityLabel("Reopen \(occurrence.title)")
             } else {
                 Menu {
@@ -301,7 +339,7 @@ private struct OccurrenceRow: View {
                     }
                     Button("Later · 1 hour") { model.later(occurrence) }
                         .disabled(!occurrence.canComplete(at: model.refreshedAt))
-                    Button("Skip Today") { model.skip(occurrence) }
+                    Button("Skip step") { model.skip(occurrence) }
                         .disabled(!occurrence.canComplete(at: model.refreshedAt))
                 } label: {
                     Image(systemName: "ellipsis")

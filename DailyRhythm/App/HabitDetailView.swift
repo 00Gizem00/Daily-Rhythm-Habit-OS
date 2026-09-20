@@ -131,7 +131,7 @@ struct HabitDetailView: View {
             }
         }
         .padding(.vertical, 5)
-        .buttonStyle(.borderless)
+        .buttonStyle(RhythmInlineButtonStyle())
     }
 
     private func canEditFuture(_ habit: Habit) -> Bool {

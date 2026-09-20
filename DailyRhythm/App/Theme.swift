@@ -20,10 +20,10 @@ enum RhythmTheme {
     static let muted = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark
             ? UIColor(red: 0.67, green: 0.73, blue: 0.77, alpha: 1)
-            : UIColor(red: 0.39, green: 0.44, blue: 0.47, alpha: 1)
+            : UIColor(red: 0.34, green: 0.39, blue: 0.42, alpha: 1)
     })
-    static let coral = Color(red: 0.91, green: 0.34, blue: 0.24)
-    static let leaf = Color(red: 0.26, green: 0.52, blue: 0.43)
+    static let coral = RhythmPalette.coral
+    static let leaf = RhythmPalette.leaf
     static let navy = Color(red: 0.12, green: 0.19, blue: 0.25)
 }
 
@@ -43,27 +43,47 @@ struct RhythmCard<Content: View>: View {
 }
 
 struct RhythmPrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.headline)
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.vertical, 15)
             .padding(.horizontal, 20)
             .frame(maxWidth: .infinity)
-            .foregroundStyle(.white)
-            .background(RhythmTheme.navy, in: RoundedRectangle(cornerRadius: 16))
-            .opacity(configuration.isPressed ? 0.78 : 1)
+            .foregroundStyle(RhythmTheme.canvas)
+            .background(RhythmTheme.ink, in: RoundedRectangle(cornerRadius: 16))
+            .opacity(!isEnabled ? 0.45 : (configuration.isPressed ? 0.78 : 1))
     }
 }
 
 struct RhythmSecondaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.subheadline.weight(.semibold))
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.vertical, 13)
             .padding(.horizontal, 16)
             .frame(maxWidth: .infinity)
             .foregroundStyle(RhythmTheme.ink)
             .background(RhythmTheme.ink.opacity(configuration.isPressed ? 0.12 : 0.06), in: RoundedRectangle(cornerRadius: 14))
+            .opacity(isEnabled ? 1 : 0.45)
+    }
+}
+
+struct RhythmInlineButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
+            .foregroundStyle(RhythmTheme.coral)
+            .opacity(!isEnabled ? 0.45 : (configuration.isPressed ? 0.7 : 1))
     }
 }
 
@@ -71,6 +91,8 @@ struct RhythmProgressRing: View {
     let full: Int
     let light: Int
     let planned: Int
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var fullFraction: Double {
         planned > 0 ? min(Double(full) / Double(planned), 1) : 0
@@ -81,6 +103,20 @@ struct RhythmProgressRing: View {
     }
 
     var body: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                Text("\(full + light) of \(planned) steps completed")
+                    .font(.title2.weight(.bold))
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                ring
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(full) full completions, \(light) light completions, \(planned) planned")
+    }
+
+    private var ring: some View {
         ZStack {
             Circle().stroke(RhythmTheme.ink.opacity(0.08), lineWidth: 10)
             Circle()
@@ -102,8 +138,8 @@ struct RhythmProgressRing: View {
             .padding(12)
         }
         .frame(width: 104, height: 104)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(full) full completions, \(light) light completions, \(planned) planned")
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: full)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: light)
     }
 }
 

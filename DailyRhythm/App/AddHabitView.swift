@@ -34,7 +34,7 @@ struct AddHabitView: View {
                         Text("Recurring habit").tag(true)
                         Text("One-off task").tag(false)
                     }
-                    .pickerStyle(.segmented)
+                    .pickerStyle(.inline)
                 }
                 HabitGoalFields(draft: $draft)
                 HabitScheduleFields(draft: $draft, allowKindChange: true)
