@@ -221,7 +221,8 @@ final class RoutineStoreTests: XCTestCase {
         let errors = ErrorCollector()
         DispatchQueue.concurrentPerform(iterations: 30) { index in
             do {
-                let independent = RoutineStore(fileURL: fileURL, calendar: calendar)
+                let independent = RoutineStore(fileURL: fileURL, calendar: calendar,
+                                               entitlementProvider: ProEntitlementFixture())
                 _ = try independent.addHabit(title: "Habit \(index)", normalTarget: "1 step", dayPart: .morning, now: now)
             } catch { errors.append(error) }
         }

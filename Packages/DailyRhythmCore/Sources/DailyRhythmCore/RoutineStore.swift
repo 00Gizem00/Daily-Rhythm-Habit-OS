@@ -11,16 +11,22 @@ public final class RoutineStore: @unchecked Sendable {
     public let fileURL: URL
     public var migrationBackupURL: URL { fileURL.appendingPathExtension("v1-backup") }
     private let localDay: LocalDay
+    private let entitlementProvider: any HabitEntitlementProvider
     private let saveSnapshot: @Sendable (Data, URL) throws -> Void
 
-    public convenience init(fileURL: URL, calendar: Calendar = .current) {
-        self.init(fileURL: fileURL, calendar: calendar, saveSnapshot: Self.writeSnapshot)
+    public convenience init(fileURL: URL, calendar: Calendar = .current,
+                            entitlementProvider: any HabitEntitlementProvider = FreeHabitEntitlementProvider()) {
+        self.init(fileURL: fileURL, calendar: calendar, entitlementProvider: entitlementProvider,
+                  saveSnapshot: Self.writeSnapshot)
     }
 
     // Internal fault-injection seam for atomic-save/migration failure tests.
-    init(fileURL: URL, calendar: Calendar, saveSnapshot: @escaping @Sendable (Data, URL) throws -> Void) {
+    init(fileURL: URL, calendar: Calendar,
+         entitlementProvider: any HabitEntitlementProvider = FreeHabitEntitlementProvider(),
+         saveSnapshot: @escaping @Sendable (Data, URL) throws -> Void) {
         self.fileURL = fileURL
         self.localDay = LocalDay(calendar: calendar)
+        self.entitlementProvider = entitlementProvider
         self.saveSnapshot = saveSnapshot
     }
 
@@ -42,19 +48,29 @@ public final class RoutineStore: @unchecked Sendable {
 
     @discardableResult
     public func addHabit(_ definition: HabitDefinition, now: Date = Date()) throws -> Habit {
+        try addHabits([definition], now: now)[0]
+    }
+
+    /// All-or-nothing creation for routines and future proposal Apply. Every recurring
+    /// definition consumes a slot, even when several definitions belong to one routine.
+    @discardableResult
+    public func addHabits(_ definitions: [HabitDefinition], now: Date = Date()) throws -> [Habit] {
         try checkDate(now)
-        let definition = try definition.cleaned()
         let key = localDay.key(for: now)
-        if case .once(let day) = definition.recurrence {
-            guard day >= key else { throw RoutineStoreError.invalidDueDate }
-            _ = try definition.due(on: day)
+        let habits = try definitions.map { input in
+            let definition = try input.cleaned()
+            if case .once(let day) = definition.recurrence {
+                guard day >= key else { throw RoutineStoreError.invalidDueDate }
+                _ = try definition.due(on: day)
+            }
+            return StoredHabit(id: UUID(), createdAt: now, firstDayKey: key, mutationDayKey: key,
+                               revisions: [HabitRevision(effectiveDayKey: key, recordedAt: now, definition: definition)],
+                               archiveIntervals: [])
         }
-        let habit = StoredHabit(id: UUID(), createdAt: now, firstDayKey: key, mutationDayKey: key,
-                                revisions: [HabitRevision(effectiveDayKey: key, recordedAt: now, definition: definition)],
-                                archiveIntervals: [])
         return try transaction { state in
-            state.habits.append(habit)
-            return (habit.snapshot(on: key), true)
+            try self.validateActivation(of: habits, in: state)
+            state.habits.append(contentsOf: habits)
+            return (habits.map { $0.snapshot(on: key) }, !habits.isEmpty)
         }
     }
 
@@ -183,18 +199,41 @@ public final class RoutineStore: @unchecked Sendable {
 
     /// Restarts planning on the restore date. All preceding archive gaps remain excluded.
     public func restore(habitID: UUID, now: Date = Date()) throws {
+        try restore(habitIDs: [habitID], now: now)
+    }
+
+    /// Atomically restores a selection. Duplicate IDs and already-active habits do
+    /// not consume extra slots. Capacity or validation failure leaves all archived.
+    public func restore(habitIDs: [UUID], now: Date = Date()) throws {
         try checkDate(now)
         let today = localDay.key(for: now)
         try transaction { state in
-            let index = try self.index(of: habitID, in: state)
-            guard state.habits[index].archivedAt != nil else { return ((), false) }
-            guard today >= state.habits[index].mutationDayKey else { throw RoutineStoreError.invalidEffectiveDate }
-            let last = state.habits[index].archiveIntervals.count - 1
-            state.habits[index].archiveIntervals[last].endDayKey = today
-            state.habits[index].archiveIntervals[last].restoredAt = now
-            state.habits[index].mutationDayKey = today
-            return ((), true)
+            let indices = try Set(habitIDs).map { try self.index(of: $0, in: state) }
+                .filter { state.habits[$0].archivedAt != nil }
+            for index in indices {
+                guard today >= state.habits[index].mutationDayKey else { throw RoutineStoreError.invalidEffectiveDate }
+            }
+            try self.validateActivation(of: indices.map { state.habits[$0] }, in: state)
+            for index in indices {
+                let last = state.habits[index].archiveIntervals.count - 1
+                state.habits[index].archiveIntervals[last].endDayKey = today
+                state.habits[index].archiveIntervals[last].restoredAt = now
+                state.habits[index].mutationDayKey = today
+            }
+            return ((), !indices.isEmpty)
         }
+    }
+
+    /// Call only after rereading the document under the transaction lock. Recurrence
+    /// kind is immutable, so future revisions and today's weekdays cannot evade capacity.
+    private func validateActivation(of habits: [StoredHabit], in state: StoreDocument) throws {
+        let requested = habits.filter { $0.revisions[0].definition.recurrence.isRecurring }.count
+        guard requested > 0 else { return }
+        let active = state.habits.filter {
+            $0.archivedAt == nil && $0.revisions[0].definition.recurrence.isRecurring
+        }.count
+        try HabitActivationPolicy.validate(activeCount: active, activatingCount: requested,
+                                           entitlement: entitlementProvider.currentEntitlement())
     }
 
     private func mutatePending(_ id: String, now: Date,
