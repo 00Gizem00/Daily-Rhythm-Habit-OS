@@ -25,6 +25,18 @@ Date-only keys follow Gregorian civil dates. Timed schedules explicitly retain t
 
 The first implementation is for small personal habit sets. Whole-file JSON transactions avoid a database dependency; benchmark and migrate before adding large imports or long histories. UI refreshes on foregrounding and periodically while active. Widget reload requests remain subject to WidgetKit scheduling.
 
+## Free activation policy
+
+`RoutineStore` defaults to Free: at most **three active recurring habits**. The count includes every unarchived weekly template, even on a day it is not scheduled or after today's occurrence is completed. One-off tasks and archived habits do not consume slots. Recurrence kind cannot be changed to bypass the limit; future schedule edits keep the same slot.
+
+Both `addHabit` overloads delegate to the atomic `addHabits` batch API. Single and batch `restore` use the same activation policy. The store rereads the current document, counts existing/requested recurring habits and samples `HabitEntitlementProvider` while holding the existing file lock, before any save. A batch that exceeds capacity or fails validation saves nothing. Restoring an already-active habit is a no-op; repeated IDs in a restore batch count once. Empty requests also leave v2 bytes unchanged. Repeated creation requests still create distinct habits if capacity permits; proposal-level Apply idempotency belongs to #18.
+
+`SharedRoutineStore.makeStore()` supplies `FreeHabitEntitlementProvider` to the app, widget and ordinary App Intents. The future verified StoreKit adapter belongs at this shared composition point and must provide a quick, thread-safe local snapshot, refreshed across processes. It must resolve unverified/unknown/expired access to Free and must not reenter the store while its lock is held. No production Pro switch, persisted entitlement flag, network call or paywall is added here. Tests alone provide deterministic Pro/downgrade fixtures.
+
+Existing stores above the cap remain valid, including v1 migrations and a future Pro downgrade. Reading, completion, undo, history, existing-habit edits and archiving do not query entitlements. No habits are deleted or automatically archived. New recurring creation/restoration is refused until the resulting active count fits; one-offs remain available while over capacity. The future export surface (#15) must keep using ungated data reads; this policy does not add that UI. New schemas and proposal Apply must use these store APIs rather than count/loop/save independently.
+
+The creation form explains the Free limit before submission and keeps entered values on failure. The store returns one English `activeHabitLimitReached` error for app and Shortcuts callers, without a success response or widget reload from the failing creation path. [Issue #6 verification](verification/ISSUE-6-FREE-POLICY-VALIDATION.md) records the executable checks and integration boundaries.
+
 ## Siri and widget scope
 
 The current code uses ordinary App Intents and App Shortcuts. Those are useful on iOS 18+, but are not the new iOS 27 `.reminders` App Schemas. Do not advertise natural-language Siri AI support based on this milestone.

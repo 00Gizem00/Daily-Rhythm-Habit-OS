@@ -34,6 +34,12 @@ struct AddHabitView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("Free plan") {
+                    Text(HabitActivationPolicy.freePlanDescription)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section {
                     TextField("Habit name, e.g. Read", text: $title)
                         .textInputAutocapitalization(.sentences)

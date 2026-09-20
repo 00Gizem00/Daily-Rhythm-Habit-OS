@@ -160,7 +160,8 @@ final class VersionedStoreTests: XCTestCase {
         let url = f.url, calendar = f.calendar
         DispatchQueue.concurrentPerform(iterations: 20) { index in
             do {
-                let store = RoutineStore(fileURL: url, calendar: calendar)
+                let store = RoutineStore(fileURL: url, calendar: calendar,
+                                         entitlementProvider: ProEntitlementFixture())
                 _ = try store.addHabit(title: "New \(index)", normalTarget: "1", dayPart: .morning,
                                        now: stamp("2026-09-21T12:00:00Z"))
                 try store.complete(occurrenceID: "11111111-1111-4111-8111-111111111111|2026-09-20",
