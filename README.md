@@ -66,7 +66,7 @@ xcrun simctl launch "$RHYTHM_SIMULATOR_UDID" com.lumetechllc.DailyRhythm
 
 In the app, create a habit, terminate the app with `xcrun simctl terminate "$RHYTHM_SIMULATOR_UDID" com.lumetechllc.DailyRhythm`, then launch it again and verify the same habit remains. Do not substitute a direct write to the store for this UI check. Simulator signing does not validate physical-device provisioning.
 
-The Xcode project is checked in. After adding or removing Swift source files, run `python3 scripts/generate_project.py`. CI checks the generated project, runs the core tests and builds both targets. Make durable signing-setting changes in the generator so regeneration retains them.
+The Xcode project is checked in. After adding, removing or renaming Swift source files, run `python3 scripts/generate_project.py`. If Xcode has this project open, use **File → Close Project**, then reopen `DailyRhythm.xcodeproj` and keep the same run destination. Cleaning build products alone does not reload source membership. The generator atomically replaces changed files and leaves identical files untouched. Each target checks its loaded source list before compilation and gives this recovery instruction if it is stale. CI validates the project and guard, runs core tests and builds both product targets. Make durable signing-setting changes in the generator so regeneration retains them.
 
 ## Next milestones
 

@@ -31,3 +31,11 @@ iOS 27.0 (27.0 - 24A434) - com.apple.CoreSimulator.SimRuntime.iOS-27-0
     Veilpic App Store (B16FEEB6-1693-44A9-AFAB-244351510B1E) (Shutdown) 
     GameCatch iPad Pro 13 (EEBC0A84-C715-4D00-9D2B-84C043A6C314) (Shutdown) 
 == Device Pairs ==
+
+# Xcode source membership
+
+- After adding, removing or renaming Swift files, run `python3 scripts/generate_project.py` and `python3 scripts/generate_project.py --check`.
+- If the project is open in Xcode, close and reopen that project after generation, preserving the selected destination. Do not quit unrelated projects or discard unsaved edits.
+- Run `python3 -m unittest discover -s scripts -p 'test_*.py'` after modifying the generator or source-membership guard. Keep the guard enabled for all targets and keep script sandboxing enabled.
+- For a user-reported Xcode build failure, verify Build in the user's Xcode session after the fix. A separate successful command-line build does not establish that the open session reloaded its project. If UI access is unavailable, report that verification gap explicitly.
+- Source-list errors require reloading the project; do not reset simulators or delete unrelated DerivedData to hide them. Make durable target/signing changes in the generator.

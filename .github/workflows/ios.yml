@@ -25,6 +25,8 @@ jobs:
           swift --version
       - name: Validate generated project
         run: python3 scripts/generate_project.py --check
+      - name: Test project generation and stale-source guard
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
       - name: Test persistence and recurrence
         run: swift test --package-path Packages/DailyRhythmCore
       - name: Build iPhone app and widgets
