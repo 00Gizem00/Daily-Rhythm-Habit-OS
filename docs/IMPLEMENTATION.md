@@ -51,6 +51,18 @@ Archive and Restore use the existing history-preserving, capacity-checked comman
 
 [Issue #7 verification](verification/ISSUE-7-MANAGEMENT-VALIDATION.md) distinguishes core checks, native compilation and the user-assisted UI matrix. Calendar import, EventKit, notifications, new Siri schemas and flexible recurrence remain separate work.
 
+## First-run setup and contextual help
+
+A new empty installation offers a short English setup sheet: editable morning/evening routines or one blank manual habit. Templates are local values; they do not create sample habits. Each reviewed draft entry has a stable UUID, editable goals/schedule and an explicit Remove action. The draft allows one to three recurring habits, with the regular Free activation check still enforced inside the store. One-off creation stays in the existing manual Add form.
+
+**Create my routine** calls `createInitialRoutine` once for the whole draft. Validation and capacity checks precede an atomic save. Those draft UUIDs become the actual habit IDs. Repeating the same confirmation, including after a process interruption, returns the existing habits without inserting copies, restoring archived habits or rewriting later edits. A different existing plan refuses first-run creation and directs the user to Today/Habits.
+
+`OnboardingPreferences` stores the reviewed draft and unseen/in-progress/skipped/finished status in local UserDefaults, separately from the shared routine document. **Not now** or sheet dismissal saves no habits and leaves a Resume my setup entry in the empty Today view. An editor's unconfirmed field changes remain local to that editor; **Use these details** updates the resumable draft, and only final routine confirmation creates habits. A returning installation, including one with only archived habits, skips automatic setup. Unreadable/unknown draft bytes are preserved; the ordinary manual Add flow remains available.
+
+After creation, the flow explains the first real completion and offers optional widget/Shortcuts help. That help is also in Habits. It uses the system `ShortcutsLink`, exact app-named phrases from `RhythmShortcuts`, and Apple support links verified on 20 September 2026. It distinguishes ordinary App Shortcuts from unimplemented advanced Siri AI/Build My Routine features, makes no Apple Reminders sync or generic routing claim, and adds no launch-time permission requests. `RoutinePlanningHelp` is a contained place for a future availability-gated planning entry; there is no inactive AI button.
+
+[Issue #9 evidence](verification/ISSUE-9-ONBOARDING-VALIDATION.md) records 79 passing core tests, native compilation, a returning-user launch smoke check and the remaining first-install/accessibility/timing walkthroughs.
+
 ## Later, Skip Today and Light Day
 
 Today offers **Later · 1 hour**, **Skip Today**, and a manual **Light Day** toggle. Later suppresses only that occurrence from Next Up until its saved instant; it retains the original ID and history day. The shared agenda also exposes explicit earlier overrides and overdue one-offs without manufacturing all missed recurring days. Ordering uses saved timed deadlines or date-only day-part anchors (09:00/14:00/19:00), then day part and stable ID. These anchors only order the list; they are not reminder times.
