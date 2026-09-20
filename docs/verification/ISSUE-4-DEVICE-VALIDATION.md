@@ -43,6 +43,16 @@ At approximately 05:56, `devicectl device process launch --terminate-existing` s
 
 The habit's raw UUID has not been extracted. `devicectl device copy from` rejected the App Group root-level `daily-rhythm.json` because its container transfer service allows only `Library`, `Documents` and `tmp` (remote service error 11007). Consequently, the earlier limited directory listing cannot establish whether the store exists. This is a developer-tool access restriction, not evidence of a failed app read/write. No data was moved, replaced or seeded to bypass it. Exact record identity and completion timestamps still require separate evidence.
 
+## Widget observations
+
+After adding the small **Your Daily Rhythm** widget, the user confirmed that it displayed **Read / 10 pages**, matching the habit created in the app. This is user-observed evidence that the widget can read the existing shared data.
+
+The user then tapped **Done** once in that widget. At approximately 06:01, foregrounding the app showed **1/1**, **1 full**, **0 light**, and **Read — Full · 10 pages**, without a storage-error banner ([app after widget completion](issue-4/app-after-widget-done.png)). A subsequent `devicectl device process launch --terminate-existing` and fresh capture showed the same completion ([app after restart](issue-4/app-widget-done-after-relaunch.png)). **The small-widget completion is visible in the app and survives an app process restart.** This establishes the visible full-completion path; raw occurrence identity/timestamp and the medium widget remain unverified.
+
+Next, the user tapped **Reopen** on the app's Read row and returned to the small widget. They reported that **Read / 10 pages** and **0/1** returned immediately. **App-to-small-widget undo refresh passes by user observation.** No numeric refresh latency was measured, and the underlying file was not extracted.
+
+At approximately 06:04, after explicitly reopening the step and tapping the small widget's **leaf** button, the user confirmed that the tap had been performed. A forced app restart then showed **1/1**, **0 full**, **1 light**, and **Read — Light · 2 pages** ([light completion after restart](issue-4/app-widget-light-after-relaunch.png)). **The small-widget light-completion path also passes visually and persists across process restart.** An earlier readiness reply had been mistaken for a completed leaf tap; the user clarified that they had not tapped it, so the preceding full-state capture is not a reproduced defect or a light-test result.
+
 ## Device matrix
 
 Each row requires an actual result. `Pending` means no pass is claimed. Tests involving corrupt files must use disposable test data, preserve an exact backup, and restore it after the check.
@@ -51,8 +61,8 @@ Each row requires an actual result. `Pending` means no pass is claimed. Tests in
 | --- | --- | --- |
 | Signing and shared container registration | Verify both signed entitlements and embedded profiles contain the exact group; install and inspect the device's registered container. | **Pass:** both signatures/profiles/configuration agree; installation and shared-container registration succeeded. Runtime access is checked by the create/relaunch row. |
 | App create and relaunch | Create a daily reading habit through the UI; record its UUID; terminate/relaunch and check the same habit. | **Partial:** UI creation and visible persistence pass after process restart; Read / 10 pages / Morning / 2 pages light step remains pending (0/1). Raw UUID verification is pending because the device transfer service restricts access to the root-level store. |
-| Widget to app | Add small/medium widgets; complete a named step in the widget; foreground/relaunch the app and compare the persisted occurrence. | Pending |
-| App to widget | Undo/complete in the app; compare saved data immediately and widget rendering after WidgetKit reload. Record latency separately. | Pending |
+| Widget to app | Add small/medium widgets; complete a named step in the widget; foreground/relaunch the app and compare the persisted occurrence. | **Partial:** small-widget full and light completions both pass visually and survive app restart: Full · 10 pages yields 1 full / 0 light; after explicit Reopen, Light · 2 pages yields 0 full / 1 light. Exact ID/timestamp and medium-widget checks remain pending. |
+| App to widget | Undo/complete in the app; compare saved data immediately and widget rendering after WidgetKit reload. Record latency separately. | **Partial:** after app Reopen, the user observed the small widget immediately return to Read / 10 pages and 0/1. Measured latency, raw data and app completion-to-widget checks remain pending. |
 | Ordinary Shortcuts | Run Create Habit, Complete Daily Step and Undo Daily Step; confirm each mutation in the app and shared store. This does not establish schema-driven Siri AI support. | Pending |
 | Duplicate completion | Repeat completion across two surfaces, including competing full/light requests; retain the first timestamp and outcome until explicit Undo. | Pending |
 | Duplicate names | Create same-name habits with different targets, including the same daypart; select one exact occurrence and confirm the other remains pending. | Pending |
