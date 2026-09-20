@@ -124,6 +124,10 @@ def generate():
                 values["ONLY_ACTIVE_ARCH"] = "YES" if configuration == "Debug" else "NO"
                 if configuration == "Release":
                     values["SWIFT_COMPILATION_MODE"] = "wholemodule"
+                else:
+                    # Keep Debug symbols when embedding the already signed widget.
+                    # Copy-phase stripping cannot modify its signed binaries.
+                    values["COPY_PHASE_STRIP"] = "NO"
             if configuration == "Debug":
                 values["SWIFT_ACTIVE_COMPILATION_CONDITIONS"] = (
                     values.get("SWIFT_ACTIVE_COMPILATION_CONDITIONS", "$(inherited)") + " DEBUG"
