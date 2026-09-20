@@ -1,0 +1,76 @@
+import SwiftUI
+import UIKit
+
+@main
+struct DailyRhythmApp: App {
+    @StateObject private var model = AppModel()
+
+    var body: some Scene {
+        WindowGroup {
+            RhythmRootView()
+                .environmentObject(model)
+                .tint(RhythmTheme.coral)
+        }
+    }
+}
+
+private struct RhythmRootView: View {
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.scenePhase) private var scenePhase
+
+    var body: some View {
+        TabView {
+            NavigationStack { TodayView() }
+                .tabItem { Label("Today", systemImage: "sun.max") }
+            NavigationStack { HabitsView() }
+                .tabItem { Label("Habits", systemImage: "square.stack.3d.up") }
+            NavigationStack { HistoryView() }
+                .tabItem { Label("History", systemImage: "chart.bar.xaxis") }
+        }
+        .foregroundStyle(RhythmTheme.ink)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if let error = model.loadError {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "exclamationmark.circle")
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Your rhythm couldn't be refreshed.")
+                            .font(.subheadline.weight(.semibold))
+                        Text(error).font(.caption)
+                    }
+                    Spacer(minLength: 0)
+                    Button("Retry") { model.refresh() }
+                        .font(.subheadline.weight(.semibold))
+                        .frame(minHeight: 44)
+                }
+                .foregroundStyle(RhythmTheme.ink)
+                .padding(16)
+                .background(RhythmTheme.card)
+            }
+        }
+        .alert("We couldn't save that change", isPresented: Binding(
+            get: { model.operationError != nil },
+            set: { if !$0 { model.operationError = nil } }
+        )) {
+            Button("OK", role: .cancel) { model.operationError = nil }
+        } message: {
+            Text(model.operationError ?? "Please try again. Your existing data has been kept.")
+        }
+        .task(id: scenePhase) {
+            guard scenePhase == .active else { return }
+            model.refresh()
+            // Extension writes and local midnight can happen without an app event.
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(for: .seconds(60))
+                } catch {
+                    return
+                }
+                guard !Task.isCancelled else { return }
+                model.refresh()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+            model.refresh()
+        }
+    }
+}
