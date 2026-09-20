@@ -145,6 +145,35 @@ public final class RoutineStore: @unchecked Sendable {
         return try transaction { state in (try keys.map { try self.summary(dayKey: $0, state: state) }, false) }
     }
 
+    /// Seven civil days through today. Previewing tomorrow never inserts records.
+    public func review(at now: Date = Date()) throws -> RhythmReview {
+        try checkDate(now)
+        let keys = try localDay.keys(days: 7, endingOn: now)
+        let todayKey = localDay.key(for: now)
+        guard let noon = localDay.date(for: todayKey),
+              let nextDay = localDay.calendar.date(byAdding: .day, value: 1, to: noon) else {
+            throw RoutineStoreError.invalidHistoryRange
+        }
+        let tomorrowKey = localDay.key(for: nextDay)
+        return try transaction { state in
+            let agenda = try self.agenda(at: now, state: state)
+            let days = try keys.map { key in
+                RhythmReviewDay(summary: try self.summary(dayKey: key, state: state),
+                                asOf: now, calendar: self.localDay.calendar)
+            }
+            let tomorrow = try self.summary(dayKey: tomorrowKey, state: state)
+            // Preview only tomorrow's original plan, excluding steps moved to later dates.
+            // Use the same due-time/day-part/ID order as Next Up, without a readiness check at noon.
+            let candidates = tomorrow.occurrences.filter {
+                !$0.isResolved && $0.due.dayKey(calendar: self.localDay.calendar) == tomorrowKey
+            }
+            let first = DailyAgenda.ordered(candidates, calendar: self.localDay.calendar).first
+            return (RhythmReview(asOf: now, agenda: agenda,
+                                 habits: state.habits.map { $0.snapshot(on: todayKey) }, days: days,
+                                 tomorrow: tomorrow, tomorrowFirstStep: first), false)
+        }
+    }
+
     /// Resolves an exact identity, including overdue one-offs and postponed work on an earlier planned date.
     public func occurrence(id: String) throws -> DailyOccurrence {
         try transaction { state in (try self.requireOccurrence(id, state: state), false) }

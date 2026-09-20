@@ -99,6 +99,14 @@ Widget privacy redaction displays a neutral lock message with no occurrence butt
 
 [Issue #12 evidence](verification/ISSUE-12-SURFACES-VALIDATION.md) records 95 passing tests, native builds and the pending device matrix. Compilation, Simulator launch and direct store tests are not proof of Control Center dispatch, widget layouts or StandBy interaction. #12 remains open.
 
+## Daily Close and weekly rhythm
+
+Today and History show a live **Daily Close** card with full, light, skipped and remaining results plus tomorrow's first planned step. History includes seven day tiles with symbols, counts and equivalent text/accessibility summaries, followed by expandable occurrence details. Large accessibility sizes use one column. Basic history stays Free and offline.
+
+`RoutineStore.review(at:)` takes one locked snapshot for the agenda, habits, week and tomorrow. App refreshes reuse it after writes and Undo, on foreground/significant time changes and on the existing refresh timer. Counts retain original planned dates: schedule revisions and archive gaps use the model's history rules, one-offs count once, and deferral/late completion never move the denominator. Remaining includes a separately labeled Planned for later subset; no future work is declared missed. Tomorrow uses effective targets and the normal due/day-part/ID order, excludes earlier carryovers and items moved beyond tomorrow, and never inserts records. Gregorian civil-date labels are formatted in UTC so travel does not shift a saved day.
+
+[Issue #13 evidence](verification/ISSUE-13-REVIEW-VALIDATION.md) records 103 passing core tests and the native build. Device Hub and the selected Simulator did not provide usable live/renderer access; light/dark, large-text and interactive checks remain pending, so #13 stays open.
+
 ## AI and Dynamic Island follow-up
 
 1. Validate the official reminder schemas against the current Xcode 27 SDK and a Siri AI-enabled physical device. Map creation and `updateReminder` completion onto the same mutation service.

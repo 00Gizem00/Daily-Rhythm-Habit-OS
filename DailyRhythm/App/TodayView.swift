@@ -54,6 +54,7 @@ struct TodayView: View {
                         }
                         .font(.subheadline)
                     }
+                    if let review = model.review { DailyCloseCard(review: review) }
                 } else if model.loadError == nil {
                     ProgressView("Loading your rhythm…")
                         .frame(maxWidth: .infinity)
