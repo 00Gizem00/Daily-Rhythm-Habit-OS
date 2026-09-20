@@ -89,6 +89,16 @@ The store is shared through `group.com.lumetechllc.DailyRhythm`. The app and ext
 
 The [issue #4 device matrix](verification/ISSUE-4-DEVICE-VALIDATION.md) records physical-device provisioning and cross-surface checks separately from the Simulator smoke test below. The first device build exposed an account configuration failure: App Groups capability was enabled, but neither app ID had a group assigned. Both explicit development profiles therefore contained an empty group list. Register and assign the exact group to both app IDs before refreshing profiles; do not remove the entitlement or introduce a second store to get past signing.
 
+## Widgets and configured Controls
+
+The existing widget bundle now includes **Open Today** and **Complete Habit**, using iOS 18 Controls APIs. Open Today uses an `OpenIntent` in both targets and an app navigation coordinator; widget body taps use the registered `daily-rhythm://today` route. Both paths select Today and reset its navigation stack. System placement is chosen by the user in Control Center, Lock Screen controls or an eligible Action button.
+
+Complete Habit configures a persistent, named recurring habit UUID. Its picker includes target, day part, weekdays and a stable short reference to distinguish duplicate names. Invocation resolves the habit's **original planned local date today** and saves full completion inside one locked store transaction. It does not pick a different pending item, a carryover or the next habit. Repeated invocations preserve an existing full or light result; skipped, archived, not-ready and unscheduled choices produce explanatory errors. Light Day does not change the configured full-step action. Widget and control writes require local device authentication; system enforcement and locked-device behaviour still need actual surface testing.
+
+Widget privacy redaction displays a neutral lock message with no occurrence button or named accessibility label. Larger accessibility text uses a compact summary linking into the app. Earlier steps are labeled separately from today's progress. Timelines include unique Later deadlines, anchored timed-due civil-day transitions and the next local midnight, including 23/25-hour days. Widget writes recheck the snapshot and current agenda under the store lock. App/intent mutations request both widget and control reloads; iOS determines refresh timing. Setup help includes Control Center, Lock Screen, Action button and StandBy instructions.
+
+[Issue #12 evidence](verification/ISSUE-12-SURFACES-VALIDATION.md) records 95 passing tests, native builds and the pending device matrix. Compilation, Simulator launch and direct store tests are not proof of Control Center dispatch, widget layouts or StandBy interaction. #12 remains open.
+
 ## AI and Dynamic Island follow-up
 
 1. Validate the official reminder schemas against the current Xcode 27 SDK and a Siri AI-enabled physical device. Map creation and `updateReminder` completion onto the same mutation service.
