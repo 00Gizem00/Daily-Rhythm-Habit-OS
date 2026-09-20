@@ -14,8 +14,10 @@ actor ReminderSchemaIndex {
     private let logger = Logger(subsystem: "com.lumetechllc.DailyRhythm", category: "ReminderSchemaIndex")
     private var isRefreshing = false
     private var needsRefresh = false
+    private var erasing = false
 
     func refreshAfterMutation() async {
+        guard !erasing else { return }
         needsRefresh = true
         guard !isRefreshing else { return }
         isRefreshing = true
@@ -25,8 +27,16 @@ actor ReminderSchemaIndex {
         while needsRefresh {
             needsRefresh = false
             do { try await refresh() }
-            catch { logger.error("Reminder indexing failed; saved tasks are unchanged: \(error.localizedDescription, privacy: .private)") }
+            catch { logger.error("Reminder indexing failed; saved tasks are unchanged.") }
         }
+    }
+
+    func clearForErasure() async throws {
+        erasing = true
+        defer { erasing = false }
+        needsRefresh = false
+        while isRefreshing { try await Task.sleep(for: .milliseconds(25)) }
+        try await CSSearchableIndex(name: "DailyRhythmReminderSchemas").deleteAllSearchableItems()
     }
 
     private func refresh() async throws {

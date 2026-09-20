@@ -66,6 +66,9 @@ struct HabitsView: View {
                 .listRowBackground(RhythmTheme.card)
             }
             Section("Make it part of your day") {
+                NavigationLink { DataPrivacyView() } label: {
+                    Label("Data & Privacy", systemImage: "lock.shield")
+                }
                 NavigationLink { NotificationSettingsView() } label: {
                     Label("Notifications", systemImage: "bell")
                 }

@@ -20,6 +20,7 @@ struct DailyRhythmApp: App {
 
 private struct RhythmRootView: View {
     @ObservedObject private var navigation = RhythmNavigation.shared
+    @ObservedObject private var privacy = DataPrivacyModel.shared
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var setup: OnboardingPreferences
     @State private var checkedFirstRun = false
@@ -39,6 +40,18 @@ private struct RhythmRootView: View {
                 .tag(2)
         }
         .id(navigation.todayRoute)
+        .id(model.dataGeneration)
+        .disabled(privacy.busy)
+        .overlay {
+            if privacy.busy {
+                ProgressView("Erasing local data…").padding(24)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+            }
+        }
+        .alert("Daily Rhythm", isPresented: Binding(get: { privacy.notice != nil },
+                                                   set: { if !$0 { privacy.notice = nil } })) {
+            Button("OK", role: .cancel) { privacy.notice = nil }
+        } message: { Text(privacy.notice ?? "") }
         .onOpenURL { url in
             if url == RhythmSurfaceRefresh.todayURL { navigation.openToday() }
             else if let destination = RhythmNotificationDestination(url: url) { navigation.openNotification(destination) }
@@ -90,6 +103,9 @@ private struct RhythmRootView: View {
         }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
+            #if DEBUG
+            RoutineBackupRecovery.runIfRequested(model: model, setup: setup)
+            #endif
             #if DEBUG && DAILY_RHYTHM_SCHEMA_SPIKE && compiler(>=6.4)
             if #available(iOS 27.0, *) { await ReminderSchemaSmoke.runIfRequested() }
             #endif

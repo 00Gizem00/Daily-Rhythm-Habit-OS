@@ -12,14 +12,17 @@ public final class RhythmNotificationCoordinator: Sendable {
     private let client: any RhythmNotificationClient
     private let now: @Sendable () -> Date
     private let plan: @Sendable (RhythmNotificationPreferences, Date) throws -> [RhythmNotificationRequest]
+    private let validateAccess: @Sendable () throws -> Void
 
     public init(preferencesURL: URL, client: any RhythmNotificationClient,
                 now: @escaping @Sendable () -> Date = { Date() },
+                validateAccess: @escaping @Sendable () throws -> Void = {},
                 plan: @escaping @Sendable (RhythmNotificationPreferences, Date) throws -> [RhythmNotificationRequest]) {
         self.preferencesURL = preferencesURL
         self.client = client
         self.now = now
         self.plan = plan
+        self.validateAccess = validateAccess
     }
 
     public func preferences() throws -> RhythmNotificationPreferences {
@@ -39,10 +42,27 @@ public final class RhythmNotificationCoordinator: Sendable {
         try await run(change: change)
     }
 
+    /// The caller has already persisted the store's erase barrier. Use this same
+    /// queue lock so any earlier add finishes before cancellation, then discard preferences.
+    public func erasePreferences() async throws {
+        let descriptor = try await acquireLock()
+        defer { _ = flock(descriptor, LOCK_UN); close(descriptor) }
+        await client.removePending(await client.pending().map(\.id).filter { $0.hasPrefix(RhythmNotificationRequest.prefix) })
+        await client.removeDelivered(await client.deliveredIDs().filter { $0.hasPrefix(RhythmNotificationRequest.prefix) })
+        let pending = await client.pending()
+        let delivered = await client.deliveredIDs()
+        guard !pending.contains(where: { $0.id.hasPrefix(RhythmNotificationRequest.prefix) }),
+              !delivered.contains(where: { $0.hasPrefix(RhythmNotificationRequest.prefix) }) else {
+            throw RhythmNotificationError.cancellationIncomplete
+        }
+        try LocalDataFiles.removeIfPresent(preferencesURL)
+    }
+
     private func run(change: RhythmNotificationPreferenceChange?) async throws -> RhythmNotificationStatus {
         let descriptor = try await acquireLock()
         defer { _ = flock(descriptor, LOCK_UN); close(descriptor) }
         do {
+            try validateAccess()
             var preferences = try preferences()
             if let change {
                 change.apply(to: &preferences)
@@ -73,6 +93,10 @@ public final class RhythmNotificationCoordinator: Sendable {
             }
             return RhythmNotificationStatus(preferences: preferences, authorization: authorization,
                 pendingCount: await client.pending().filter { $0.id.hasPrefix(RhythmNotificationRequest.prefix) }.count)
+        } catch LocalDataError.staleAction {
+            // A previous generation has no authority over the new generation's queue.
+            // Its own requests were already drained by the completed erase.
+            throw LocalDataError.staleAction
         } catch {
             // A partial schedule or an unreadable plan is not a trustworthy queue.
             // Keep data/preferences intact, clear only our requests, and surface failure.

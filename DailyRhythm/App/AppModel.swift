@@ -15,6 +15,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var agenda: DailyAgenda?
     @Published private(set) var completionFeedback = 0
     @Published private(set) var refreshedAt = Date()
+    @Published private(set) var dataGeneration = RoutineDataLifecycle.initialGeneration
 
     var activeHabits: [Habit] { habits.filter { $0.archivedAt == nil } }
     var archivedHabits: [Habit] { habits.filter { $0.archivedAt != nil } }
@@ -28,6 +29,7 @@ final class AppModel: ObservableObject {
             let store = try SharedRoutineStore.makeStore()
             let now = Date()
             let snapshot = try store.review(at: now)
+            dataGeneration = try store.validateAccess()
             review = snapshot
             today = snapshot.agenda.summary
             agenda = snapshot.agenda
@@ -42,10 +44,16 @@ final class AppModel: ObservableObject {
     }
 
     @discardableResult
-    func addHabit(_ definition: HabitDefinition) -> Bool {
+    func addHabit(_ definition: HabitDefinition, expectedGeneration: UUID) -> Bool {
         performMutation {
-            _ = try SharedRoutineStore.makeStore().addHabit(definition)
+            _ = try SharedRoutineStore.makeStore(expectedGeneration: expectedGeneration).addHabit(definition)
         }
+    }
+
+    func clearForErasure() {
+        today = nil; habits = []; review = nil; agenda = nil
+        lastUndo = nil; operationError = nil; loadError = nil
+        completionFeedback = 0
     }
 
     func createInitialRoutine(_ draft: OnboardingDraft) -> Bool {

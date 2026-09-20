@@ -55,11 +55,12 @@ struct SystemRhythmNotificationClient: RhythmNotificationClient {
 }
 
 enum RhythmNotifications {
-    static func coordinator() throws -> RhythmNotificationCoordinator {
+    static func coordinator(expectedGeneration: UUID? = nil) throws -> RhythmNotificationCoordinator {
         let container = try SharedRoutineStore.containerURL()
+        let store = try SharedRoutineStore.makeStore(expectedGeneration: expectedGeneration)
         return RhythmNotificationCoordinator(preferencesURL: container.appendingPathComponent("notification-preferences.json"),
-            client: SystemRhythmNotificationClient()) { preferences, now in
-                try SharedRoutineStore.makeStore().notificationPlan(preferences: preferences, at: now)
+            client: SystemRhythmNotificationClient(), validateAccess: { _ = try store.validateAccess() }) { preferences, now in
+                try store.notificationPlan(preferences: preferences, at: now)
             }
     }
 

@@ -16,21 +16,116 @@ public final class RoutineStore: @unchecked Sendable {
     private let localDay: LocalDay
     private let entitlementProvider: any HabitEntitlementProvider
     private let saveSnapshot: @Sendable (Data, URL) throws -> Void
+    private let capturedGeneration: Result<UUID, Error>
+    private let saveLifecycle: @Sendable (RoutineDataLifecycle, URL) throws -> Void
+    public var lifecycleURL: URL { fileURL.appendingPathExtension("lifecycle") }
 
     public convenience init(fileURL: URL, calendar: Calendar = .current,
-                            entitlementProvider: any HabitEntitlementProvider = FreeHabitEntitlementProvider()) {
+                            entitlementProvider: any HabitEntitlementProvider = FreeHabitEntitlementProvider(),
+                            expectedGeneration: UUID? = nil) {
         self.init(fileURL: fileURL, calendar: calendar, entitlementProvider: entitlementProvider,
-                  saveSnapshot: Self.writeSnapshot)
+                  expectedGeneration: expectedGeneration, saveSnapshot: Self.writeSnapshot)
     }
 
     // Internal fault-injection seam for atomic-save/migration failure tests.
     init(fileURL: URL, calendar: Calendar,
          entitlementProvider: any HabitEntitlementProvider = FreeHabitEntitlementProvider(),
+         expectedGeneration: UUID? = nil,
+         saveLifecycle: @escaping @Sendable (RoutineDataLifecycle, URL) throws -> Void = { try $0.write(to: $1) },
          saveSnapshot: @escaping @Sendable (Data, URL) throws -> Void) {
         self.fileURL = fileURL
         self.localDay = LocalDay(calendar: calendar)
         self.entitlementProvider = entitlementProvider
         self.saveSnapshot = saveSnapshot
+        self.saveLifecycle = saveLifecycle
+        capturedGeneration = Result { try expectedGeneration ?? RoutineDataLifecycle.read(from: fileURL.appendingPathExtension("lifecycle")).generation }
+    }
+
+    public func dataLifecycle() throws -> RoutineDataLifecycle {
+        try withLock { try RoutineDataLifecycle.read(from: lifecycleURL) }
+    }
+
+    @discardableResult
+    public func validateAccess() throws -> UUID {
+        try withLock { try validateGeneration(RoutineDataLifecycle.read(from: lifecycleURL)) }
+    }
+
+    private func validateGeneration(_ lifecycle: RoutineDataLifecycle) throws -> UUID {
+        guard !lifecycle.erasurePending else { throw LocalDataError.erasurePending }
+        guard lifecycle.generation == (try capturedGeneration.get()) else { throw LocalDataError.staleAction }
+        return lifecycle.generation
+    }
+
+    /// Only call after explicit user confirmation. Persist the barrier before any cleanup.
+    /// A retry resumes the same generation; it never silently re-enables stale writers.
+    public func beginErasure(expectedGeneration: UUID) throws -> RoutineDataLifecycle {
+        try withLock {
+            var lifecycle = try RoutineDataLifecycle.read(from: lifecycleURL)
+            if lifecycle.erasurePending { return lifecycle }
+            guard lifecycle.generation == expectedGeneration else { throw LocalDataError.staleAction }
+            lifecycle.generation = UUID()
+            lifecycle.erasurePending = true
+            try saveLifecycle(lifecycle, lifecycleURL)
+            return lifecycle
+        }
+    }
+
+    /// Call after all notification/index/cache cleanup has succeeded. Keep both stable
+    /// lock files and the non-personal generation marker across every erase and retry.
+    public func finishErasure(generation: UUID) throws {
+        try withLock {
+            var lifecycle = try RoutineDataLifecycle.read(from: lifecycleURL)
+            guard lifecycle.generation == generation else { throw LocalDataError.staleAction }
+            guard lifecycle.erasurePending else { return }
+            for url in [fileURL, migrationBackupURL(from: 1), migrationBackupURL(from: 2)] {
+                try LocalDataFiles.removeIfPresent(url)
+            }
+            lifecycle.erasurePending = false
+            try saveLifecycle(lifecycle, lifecycleURL)
+        }
+    }
+
+    /// Export exactly one validated snapshot, without migrating or inventing history.
+    public func exportData(format: RoutineExportFormat, at now: Date = Date()) throws -> Data {
+        try checkDate(now)
+        return try transaction(migrate: false) { state in
+            (try RoutineDataExport.encode(state, format: format, at: now), false)
+        }
+    }
+
+    /// Recovery is Free and only replaces an empty validated store. Current-generation
+    /// checking, the empty check and atomic persistence happen in the same transaction.
+    public func restoreBackup(_ backup: RoutineBackup) throws {
+        try transaction { state in
+            guard state.habits.isEmpty, state.records.isEmpty, (state.dayModes ?? []).isEmpty else {
+                throw LocalDataError.restoreRequiresEmptyStore
+            }
+            state = backup.document
+            return ((), true)
+        }
+    }
+
+    /// Compare every saved field, treating weekday sets by membership, not JSON order.
+    public func matchesRestoredBackup(_ backup: RoutineBackup) throws -> Bool {
+        try transaction(migrate: false) { state in (state == backup.document, false) }
+    }
+
+    /// Stage the export under the data lock so erasure cannot miss a late file write.
+    public func writeExport(format: RoutineExportFormat, to destination: URL, at now: Date = Date()) throws {
+        try checkDate(now)
+        try transaction(migrate: false) { state in
+            try LocalDataFiles.write(RoutineDataExport.encode(state, format: format, at: now), to: destination)
+            return ((), false)
+        }
+    }
+
+    /// App-owned diagnostics use the same barrier; old async work cannot recreate
+    /// an erased report after cleanup. No store access may occur inside the encoder.
+    public func writeAuxiliaryData(_ data: Data, to destination: URL) throws {
+        try transaction(migrate: false) { _ in
+            try LocalDataFiles.write(data, to: destination)
+            return ((), false)
+        }
     }
 
     /// Archive filtering reflects the latest archive/restore action. `asOf` selects the effective definition.
@@ -83,6 +178,9 @@ public final class RoutineStore: @unchecked Sendable {
     @discardableResult
     public func createInitialRoutine(_ draft: OnboardingDraft, now: Date = Date()) throws -> [Habit] {
         try checkDate(now)
+        guard (draft.generation ?? RoutineDataLifecycle.initialGeneration) == (try capturedGeneration.get()) else {
+            throw LocalDataError.staleAction
+        }
         guard (1...3).contains(draft.entries.count), Set(draft.entries.map(\.id)).count == draft.entries.count else {
             throw RoutineStoreError.invalidOnboardingDraft
         }
@@ -582,7 +680,7 @@ public final class RoutineStore: @unchecked Sendable {
         guard validDate(date) else { throw RoutineStoreError.invalidDueDate }
     }
 
-    private func transaction<T>(_ body: (inout StoreDocument) throws -> (T, Bool)) throws -> T {
+    private func withLock<T>(_ body: () throws -> T) throws -> T {
         guard fileURL.isFileURL else { throw RoutineStoreError.fileAccess("Expected a file URL") }
         let directory = fileURL.deletingLastPathComponent()
         do {
@@ -602,9 +700,15 @@ public final class RoutineStore: @unchecked Sendable {
         }
         defer { _ = flock(descriptor, LOCK_UN) }
 
+        return try body()
+    }
+
+    private func transaction<T>(migrate: Bool = true, _ body: (inout StoreDocument) throws -> (T, Bool)) throws -> T {
+        try withLock {
+        _ = try validateGeneration(RoutineDataLifecycle.read(from: lifecycleURL))
         var (state, legacyBytes, sourceVersion) = try readState()
         let (result, changed) = try body(&state)
-        if changed || legacyBytes != nil {
+        if changed || (migrate && legacyBytes != nil) {
             do { try state.validate() }
             catch { throw RoutineStoreError.corruptData }
             do {
@@ -618,6 +722,7 @@ public final class RoutineStore: @unchecked Sendable {
             } catch { throw RoutineStoreError.fileAccess("Save data: \(error.localizedDescription)") }
         }
         return result
+        }
     }
 
     private func preserveLegacyBytes(_ original: Data, version: Int) throws {

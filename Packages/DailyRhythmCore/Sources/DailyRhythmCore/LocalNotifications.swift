@@ -109,11 +109,12 @@ public struct RhythmNotificationStatus: Sendable {
 }
 
 public enum RhythmNotificationError: Error, LocalizedError {
-    case invalidPreferences, busy
+    case invalidPreferences, busy, cancellationIncomplete
     public var errorDescription: String? {
         switch self {
         case .invalidPreferences: "Notification preferences could not be read. Your habit data has been kept."
         case .busy: "Notifications are being updated by another action. Try again shortly."
+        case .cancellationIncomplete: "Notification removal has not finished. Try erasing again shortly."
         }
     }
 }
