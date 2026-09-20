@@ -12,7 +12,7 @@ Tracking: [#10](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/issues/10). [
 
 Physical device: **iPhone 16**, **iOS 27.0 (`24A437`)**, Developer Mode enabled. Existing development certificate and explicit app/widget provisioning profiles were used, with no account settings or billing change. Both signatures verified; signed/profile App Groups matched `group.com.lumetechllc.DailyRhythm`, and both profiles included the selected physical phone. Device serial/UDID/profile contents are not included in this repository evidence.
 
-Before launch, the device reported `passcodeRequired: false`, `unlockedSinceBoot: true`. The app reported device locale **en_TR**, preferred languages **en-TR, tr-TR**. **Siri language and Siri AI enabled/availability state are unverified**; device locale is not evidence of Siri language. The user was asked for those settings; no answer is assumed.
+Before launch, the device reported `passcodeRequired: false`, `unlockedSinceBoot: true`. The app reported device locale **en_TR**, preferred languages **en-TR, tr-TR**. The user subsequently confirmed that **Siri/Apple Intelligence is enabled and Siri uses English**. This is user-reported configuration, not demonstrated schema dispatch or feature availability. Device region remains unconfirmed; device locale is not evidence of Siri language. The original device-generated report retains its contemporaneous unverified settings values.
 
 ## Builds and tests
 
@@ -66,7 +66,7 @@ The device wrote a local JSON report under its app Documents directory; `devicec
 
 Required before closing #10 or promoting #11:
 
-1. Confirm Siri AI state, Siri language and region on the eligible phone.
+1. Confirm device region and demonstrated Siri AI schema availability. Siri/Apple Intelligence enabled and English language are user-reported.
 2. Invoke **Create Daily Rhythm Reminder** and **Update Daily Rhythm Reminder** through actual system dispatch, then through Siri with an explicit app name. Verify create → full completion → reopen and compare the app result.
 3. Exercise lock/authentication behaviour. Direct method calls do not validate `requiresLocalDeviceAuthentication` or background system execution.
 4. Record truthful unsupported/ambiguous routing results and the unresolved SSU training diagnostic's effect, if any.
