@@ -1,0 +1,23 @@
+{
+  "create" : true,
+  "deviceLocale" : "en_TR",
+  "deviceModel" : "iPhone",
+  "execution" : "Direct calls to the actual schema intent perform methods; not a Siri invocation",
+  "finishedAt" : "2026-09-20T10:29:29Z",
+  "occurrenceID" : "5C9EC8E9-7511-4411-A88F-1C3363033317|2026-09-20",
+  "passed" : true,
+  "preExistingPlansAndResultsUnchanged" : true,
+  "preferredLanguages" : [
+    "en-TR",
+    "tr-TR"
+  ],
+  "repeatedCompletionUnchanged" : true,
+  "runID" : "7D428561-E5E0-46FA-9088-4B7971BB67E3",
+  "siriAIState" : "Unverified",
+  "siriLanguage" : "Unverified",
+  "startedAt" : "2026-09-20T10:29:29Z",
+  "systemVersion" : "27.0",
+  "testItemArchived" : true,
+  "updateComplete" : true,
+  "updateReopen" : true
+}
