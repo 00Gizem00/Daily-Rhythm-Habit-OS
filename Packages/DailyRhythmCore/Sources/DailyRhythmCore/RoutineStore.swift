@@ -174,6 +174,63 @@ public final class RoutineStore: @unchecked Sendable {
         }
     }
 
+    /// A bounded seven-civil-day plan, calculated without materializing records.
+    /// Dates around the window also cover timed plans anchored to another timezone.
+    public func notificationPlan(preferences: RhythmNotificationPreferences, at now: Date = Date()) throws -> [RhythmNotificationRequest] {
+        try checkDate(now)
+        try preferences.validate()
+        let calendar = localDay.calendar
+        let start = calendar.startOfDay(for: now)
+        guard let end = calendar.date(byAdding: .day, value: 7, to: start) else {
+            throw RoutineStoreError.invalidHistoryRange
+        }
+        return try transaction { state in
+            var closes: [RhythmNotificationRequest] = []
+            if preferences.dailyClose {
+                for offset in 0..<7 {
+                    guard let date = calendar.date(byAdding: .day, value: offset, to: start) else { continue }
+                    let key = self.localDay.key(for: date)
+                    let definition = HabitDefinition(title: "Daily Close", normalTarget: "Review", dayPart: .evening,
+                        recurrence: .once(dayKey: key), dueTime: ScheduledTime(hour: preferences.closeHour,
+                        minute: preferences.closeMinute, timeZoneIdentifier: calendar.timeZone.identifier))
+                    if let fire = try definition.due(on: key).instant, fire > now, fire < end {
+                        closes.append(RhythmNotificationRequest(id: RhythmNotificationRequest.prefix + "close." + key,
+                            fireDate: fire, title: "Daily Close", body: "Take a moment to review your day in Daily Rhythm.",
+                            destination: .day(key)))
+                    }
+                }
+            }
+            var steps: [String: DailyOccurrence] = [:]
+            if preferences.timedSteps {
+                let activeIDs = Set(state.habits.filter { $0.archivedAt == nil }.map(\.id))
+                for offset in -2...8 {
+                    guard let date = calendar.date(byAdding: .day, value: offset, to: start) else { continue }
+                    for step in try self.summary(dayKey: self.localDay.key(for: date), state: state).occurrences {
+                        if activeIDs.contains(step.habitID) { steps[step.id] = step }
+                    }
+                }
+                // Explicit overrides can retain a much older original date after Later.
+                for step in state.records where !step.isResolved && activeIDs.contains(step.habitID) {
+                    if let current = try self.occurrence(for: state.habits[self.index(of: step.habitID, in: state)],
+                                                         on: step.dayKey, state: state) { steps[current.id] = current }
+                }
+            }
+            let reminders = steps.values.compactMap { step -> RhythmNotificationRequest? in
+                guard !step.isResolved, let due = step.due.instant else { return nil }
+                // Calendar triggers have whole-second precision; never round an instant earlier.
+                let fire = Date(timeIntervalSince1970: max(due, step.deferredUntil ?? due).timeIntervalSince1970.rounded(.up))
+                guard fire > now, fire < end else { return nil }
+                return RhythmNotificationRequest(id: RhythmNotificationRequest.prefix + "step." + step.id,
+                    fireDate: fire, title: "Daily Rhythm", body: "Check your planned step in Daily Rhythm.",
+                    destination: .occurrence(step.id))
+            }.sorted { $0.fireDate == $1.fireDate ? $0.id < $1.id : $0.fireDate < $1.fireDate }
+            // Reserve room for Daily Close and leave headroom in the system queue.
+            return ((closes + reminders.prefix(max(0, 56 - closes.count))).sorted {
+                $0.fireDate == $1.fireDate ? $0.id < $1.id : $0.fireDate < $1.fireDate
+            }, false)
+        }
+    }
+
     /// Resolves an exact identity, including overdue one-offs and postponed work on an earlier planned date.
     public func occurrence(id: String) throws -> DailyOccurrence {
         try transaction { state in (try self.requireOccurrence(id, state: state), false) }

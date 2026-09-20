@@ -10,11 +10,24 @@ final class RhythmNavigation: ObservableObject {
     static let shared = RhythmNavigation()
     @Published var selectedTab = 0
     @Published var todayRoute = UUID()
+    @Published var notificationRoute: RhythmNotificationRoute?
 
     func openToday() {
+        notificationRoute = nil
         selectedTab = 0
         todayRoute = UUID()
     }
+
+    func openNotification(_ destination: RhythmNotificationDestination) {
+        selectedTab = 0
+        todayRoute = UUID()
+        notificationRoute = RhythmNotificationRoute(destination: destination)
+    }
+}
+
+struct RhythmNotificationRoute: Identifiable {
+    let id = UUID()
+    let destination: RhythmNotificationDestination
 }
 #endif
 
@@ -98,6 +111,7 @@ struct CompleteControlHabitIntent: AppIntent {
         guard let habit else { throw ControlConfigurationError.chooseHabit }
         defer { RhythmSurfaceRefresh.reload() }
         let saved = try SharedRoutineStore.makeStore().completeCurrentHabit(habitID: habit.id)
+        await RhythmNotifications.reconcileAfterMutation()
         let outcome = saved.outcome == .light ? "light" : "full"
         return .result(dialog: "\(saved.title): today's \(outcome) step is recorded.")
     }

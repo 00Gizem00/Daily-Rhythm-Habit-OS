@@ -65,6 +65,7 @@ struct CreateHabitIntent: AppIntent {
             weekdays: repeatPattern.calendarWeekdays
         )
         RhythmSurfaceRefresh.reload()
+        await RhythmNotifications.reconcileAfterMutation()
         return .result(dialog: "Your habit is ready in Daily Rhythm.")
     }
 }
@@ -87,6 +88,7 @@ struct CompleteOccurrenceIntent: AppIntent {
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         try completeStep(occurrence: occurrence, useSmallStep: useSmallStep, source: .appIntent)
+        await RhythmNotifications.reconcileAfterMutation()
         return .result(dialog: "Your step is recorded.")
     }
 }
@@ -115,6 +117,7 @@ struct CompleteWidgetOccurrenceIntent: AppIntent {
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         try completeStep(occurrence: occurrence, useSmallStep: useSmallStep, source: .widget, expectedRevision: snapshotRevision)
+        await RhythmNotifications.reconcileAfterMutation()
         return .result(dialog: "Your step is recorded.")
     }
 }
@@ -166,6 +169,7 @@ struct ReopenOccurrenceIntent: AppIntent {
         }
         try store.reopen(occurrenceID: occurrence.id, expectedRevision: current.revision)
         RhythmSurfaceRefresh.reload()
+        await RhythmNotifications.reconcileAfterMutation()
         return .result(dialog: "Your step is ready to record again.")
     }
 }
