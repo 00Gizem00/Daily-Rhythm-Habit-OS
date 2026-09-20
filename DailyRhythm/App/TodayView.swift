@@ -11,58 +11,46 @@ struct TodayView: View {
             VStack(alignment: .leading, spacing: 24) {
                 header
                 if let today = model.today {
-                    if model.activeHabits.isEmpty && today.totalCount == 0 {
+                    let items = model.agenda?.occurrences ?? today.occurrences
+                    if model.activeHabits.isEmpty && items.isEmpty {
                         welcome
-                    } else if today.totalCount == 0 {
-                        RhythmCard {
-                            RhythmEmptyState(
-                                symbol: "leaf",
-                                title: "Room to breathe.",
-                                message: "No habits are scheduled today. Your next planned day is waiting in Habits."
-                            )
-                        }
                     } else {
-                        progress(today)
+                        lightDay(today)
+                        if today.totalCount > 0 { progress(today) }
                         if let next = model.nextOccurrence {
                             NextUpCard(occurrence: next)
-                        } else if today.remainingCount == 0 {
-                            RhythmCard {
-                                Label("Today's rhythm is complete.", systemImage: "sparkles")
-                                    .font(.title3.weight(.semibold))
-                                Text("\(today.fullCount) full · \(today.lightCount) light. Every recorded step has its place.")
-                                    .font(.subheadline)
-                                    .foregroundStyle(RhythmTheme.muted)
-                                    .padding(.top, 6)
-                            }
                         } else {
                             RhythmCard {
-                                Label("Planned for later.", systemImage: "calendar")
+                                Label(items.contains(where: { !$0.isResolved }) ? "Planned for later." : "No steps waiting.",
+                                      systemImage: "sun.horizon")
                                     .font(.title3.weight(.semibold))
-                                Text("Pending steps keep their due dates. They have not been recorded as complete.")
+                                Text("\(today.fullCount) full · \(today.lightCount) light · \(today.skippedCount) skipped today.")
                                     .font(.subheadline).foregroundStyle(RhythmTheme.muted)
                             }
                         }
-                        if let undoID = model.lastCompletedID,
-                           today.occurrences.contains(where: { $0.id == undoID && $0.outcome != nil }) {
-                            HStack {
-                                Label("Step saved", systemImage: "checkmark.circle.fill")
-                                    .foregroundStyle(RhythmTheme.leaf)
-                                Spacer()
-                                Button("Undo") { model.reopen(undoID) }
-                                    .fontWeight(.semibold)
-                                    .frame(minHeight: 44)
-                            }
-                            .font(.subheadline)
-                            .padding(.horizontal, 4)
-                        }
                         ForEach(DayPart.allCases, id: \.self) { part in
-                            let items = today.occurrences.filter { $0.dayPart == part }
-                            if !items.isEmpty { dayPart(part, items: items) }
+                            let planned = items.filter { $0.dayKey == today.dayKey && $0.dayPart == part }
+                            if !planned.isEmpty { dayPart(part, items: planned) }
                         }
-                        Text("Full and light steps are recorded separately. A lighter day still belongs in your story.")
-                            .font(.footnote)
-                            .foregroundStyle(RhythmTheme.muted)
-                            .padding(.horizontal, 4)
+                        let carryovers = items.filter { $0.dayKey != today.dayKey }
+                        if !carryovers.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("From earlier days").font(.headline)
+                                Text("These steps keep their original day in history and its progress count.")
+                                    .font(.caption).foregroundStyle(RhythmTheme.muted)
+                                ForEach(carryovers) { OccurrenceRow(occurrence: $0) }
+                            }
+                        }
+                        Text("Full, light and skipped steps are recorded separately. Skipping never counts as completing.")
+                            .font(.footnote).foregroundStyle(RhythmTheme.muted)
+                    }
+                    if model.lastUndo != nil {
+                        HStack {
+                            Label("Change saved", systemImage: "checkmark.circle")
+                            Spacer()
+                            Button("Undo") { model.undoLastAction() }.frame(minHeight: 44)
+                        }
+                        .font(.subheadline)
                     }
                 } else if model.loadError == nil {
                     ProgressView("Loading your rhythm…")
@@ -122,6 +110,17 @@ struct TodayView: View {
         }
     }
 
+    private func lightDay(_ summary: DailySummary) -> some View {
+        RhythmCard {
+            Toggle("Light Day", isOn: Binding(get: { summary.isLightDay }, set: { model.setLightDay($0) }))
+                .font(.headline)
+            Text(summary.isLightDay
+                 ? "For today, your saved smaller targets come first. Turn off to return to your full targets."
+                 : "Choose a lighter pace for today using the smaller targets you have saved.")
+                .font(.caption).foregroundStyle(RhythmTheme.muted).padding(.top, 6)
+        }
+    }
+
     private func progress(_ summary: DailySummary) -> some View {
         RhythmCard {
             ViewThatFits(in: .horizontal) {
@@ -150,6 +149,8 @@ struct TodayView: View {
                     .foregroundStyle(RhythmTheme.leaf)
                 Label("\(summary.lightCount) light", systemImage: "leaf.fill")
                     .foregroundStyle(RhythmTheme.coral)
+                Label("\(summary.skippedCount) skipped", systemImage: "forward.end")
+                    .foregroundStyle(RhythmTheme.muted)
             }
             .font(.subheadline.weight(.medium))
         }
@@ -161,7 +162,7 @@ struct TodayView: View {
                 Label(part.displayName, systemImage: part.symbol)
                     .font(.headline)
                 Spacer()
-                Text("\(items.filter { $0.outcome != nil }.count)/\(items.count)")
+                Text("\(items.filter(\.isCompleted).count)/\(items.count)")
                     .font(.subheadline.monospacedDigit())
                     .foregroundStyle(RhythmTheme.muted)
             }
@@ -180,6 +181,7 @@ struct TodayView: View {
 private struct NextUpCard: View {
     @EnvironmentObject private var model: AppModel
     let occurrence: DailyOccurrence
+    @State private var editingOccurrence: DailyOccurrence?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -193,7 +195,7 @@ private struct NextUpCard: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(occurrence.title)
                     .font(.system(.title, design: .rounded, weight: .bold))
-                Text(occurrence.normalTarget)
+                Text(model.today?.isLightDay == true ? (occurrence.lightTarget ?? occurrence.normalTarget) : occurrence.normalTarget)
                     .font(.title3)
                     .foregroundStyle(RhythmTheme.muted)
                 Text(RhythmDates.dueLabel(occurrence.due))
@@ -202,22 +204,43 @@ private struct NextUpCard: View {
                     Text("Overdue · not recorded").font(.caption).foregroundStyle(RhythmTheme.coral)
                 }
             }
-            Button { model.complete(occurrence, outcome: .full) } label: {
-                Label("Full step done", systemImage: "checkmark")
-            }
-            .buttonStyle(RhythmPrimaryButtonStyle())
-            .accessibilityLabel("Complete \(occurrence.title), full goal: \(occurrence.normalTarget)")
-            if let light = occurrence.lightTarget {
+            if model.today?.isLightDay == true, let light = occurrence.lightTarget {
                 Button { model.complete(occurrence, outcome: .light) } label: {
                     Label("Light step: \(light)", systemImage: "leaf")
-                        .multilineTextAlignment(.center)
                 }
-                .buttonStyle(RhythmSecondaryButtonStyle())
-                .accessibilityLabel("Complete \(occurrence.title), light goal: \(light)")
+                .buttonStyle(RhythmPrimaryButtonStyle())
+                Button("Full step: \(occurrence.normalTarget)") { model.complete(occurrence, outcome: .full) }
+                    .buttonStyle(RhythmSecondaryButtonStyle())
+            } else {
+                Button { model.complete(occurrence, outcome: .full) } label: {
+                    Label("Full step done", systemImage: "checkmark")
+                }
+                .buttonStyle(RhythmPrimaryButtonStyle())
+                .accessibilityLabel("Complete \(occurrence.title), full goal: \(occurrence.normalTarget)")
+                if let light = occurrence.lightTarget {
+                    Button("Light step: \(light)") { model.complete(occurrence, outcome: .light) }
+                        .buttonStyle(RhythmSecondaryButtonStyle())
+                } else if model.today?.isLightDay == true {
+                    Text("No smaller target saved for this step.").font(.subheadline)
+                    if occurrence.dayKey == model.today?.dayKey {
+                        Button("Add a smaller target for this step") { editingOccurrence = occurrence }
+                            .frame(minHeight: 44)
+                    } else {
+                        Text("Past targets stay in history. Edit the future plan to add a smaller target for upcoming days.")
+                            .font(.caption).foregroundStyle(RhythmTheme.muted)
+                    }
+                }
             }
+            HStack {
+                Button("Later · 1 hour", systemImage: "clock") { model.later(occurrence) }
+                Spacer()
+                Button("Skip Today", systemImage: "forward.end") { model.skip(occurrence) }
+            }
+            .font(.subheadline).frame(minHeight: 44)
             NavigationLink("Edit or manage this plan") { HabitDetailView(habitID: occurrence.habitID) }
                 .font(.subheadline)
         }
+        .sheet(item: $editingOccurrence) { OccurrenceEditor(occurrence: $0) }
         .padding(24)
         .background(RhythmTheme.coral.opacity(0.075), in: RoundedRectangle(cornerRadius: 26))
         .overlay {
@@ -252,7 +275,7 @@ private struct OccurrenceRow: View {
             }
             Spacer(minLength: 4)
             if occurrence.outcome != nil {
-                Button("Reopen") { model.reopen(occurrence.id) }
+                Button("Reopen") { model.reopen(occurrence) }
                     .font(.caption.weight(.semibold))
                     .frame(minWidth: 44, minHeight: 44)
                     .accessibilityLabel("Reopen \(occurrence.title)")
@@ -264,8 +287,12 @@ private struct OccurrenceRow: View {
                         Button("Light: \(light)") { model.complete(occurrence, outcome: .light) }
                             .disabled(!occurrence.canComplete(at: model.refreshedAt))
                     }
+                    Button("Later · 1 hour") { model.later(occurrence) }
+                        .disabled(!occurrence.canComplete(at: model.refreshedAt))
+                    Button("Skip Today") { model.skip(occurrence) }
+                        .disabled(!occurrence.canComplete(at: model.refreshedAt))
                 } label: {
-                    Image(systemName: "checkmark")
+                    Image(systemName: "ellipsis")
                         .font(.body.weight(.semibold))
                         .frame(width: 44, height: 44)
                         .background(RhythmTheme.ink.opacity(0.04), in: Circle())
@@ -281,6 +308,7 @@ private struct OccurrenceRow: View {
         switch occurrence.outcome {
         case .full: "checkmark.circle.fill"
         case .light: "leaf.fill"
+        case .skipped: "forward.end.circle"
         case nil: "circle"
         }
     }
@@ -289,6 +317,7 @@ private struct OccurrenceRow: View {
         switch occurrence.outcome {
         case .full: RhythmTheme.leaf
         case .light: RhythmTheme.coral
+        case .skipped: RhythmTheme.muted
         case nil: RhythmTheme.muted.opacity(0.5)
         }
     }
@@ -297,7 +326,8 @@ private struct OccurrenceRow: View {
         switch occurrence.outcome {
         case .full: "Full · \(occurrence.normalTarget)"
         case .light: "Light · \(occurrence.lightTarget ?? "Small step")"
-        case nil: occurrence.normalTarget
+        case .skipped: "Skipped · not completed"
+        case nil: occurrence.deferredUntil.map { "Later · \(RhythmDates.dueLabel(.timed(at: $0, timeZoneIdentifier: TimeZone.current.identifier)))" } ?? occurrence.normalTarget
         }
     }
 }

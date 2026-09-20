@@ -1,5 +1,6 @@
 # Version 2: schedules, occurrences and migration
 
+Current persistence is v3. The scheduling rules below remain in force; see [MODEL-V3.md](MODEL-V3.md) for day actions and v1/v2 upgrade/recovery details.
 Implements [issue #5](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/issues/5). The Foundation-only `DailyRhythmCore` package remains the single mutation service for the app, widgets and ordinary App Intents. [Issue #7 management screens](IMPLEMENTATION.md#habit-and-one-off-management) expose creation and history-preserving editing; ordinary creation Shortcuts still create repeating, date-only habits. Siri schema support remains later roadmap work.
 
 ## Supported values

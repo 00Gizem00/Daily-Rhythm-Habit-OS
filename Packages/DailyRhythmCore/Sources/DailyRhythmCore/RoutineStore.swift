@@ -10,6 +10,9 @@ import Glibc
 public final class RoutineStore: @unchecked Sendable {
     public let fileURL: URL
     public var migrationBackupURL: URL { fileURL.appendingPathExtension("v1-backup") }
+    public func migrationBackupURL(from version: Int) -> URL {
+        fileURL.appendingPathExtension("v\(version)-backup")
+    }
     private let localDay: LocalDay
     private let entitlementProvider: any HabitEntitlementProvider
     private let saveSnapshot: @Sendable (Data, URL) throws -> Void
@@ -138,7 +141,7 @@ public final class RoutineStore: @unchecked Sendable {
                 plannedKeys = Set(keys)
                 plannedKeys.formUnion(state.records.filter {
                     guard $0.habitID == habitID, $0.dayKey < keys[0] else { return false }
-                    guard let completedAt = $0.completedAt else { return true }
+                    guard let completedAt = $0.resolvedAt else { return true }
                     return (keys[0]...keys[keys.count - 1]).contains(self.localDay.key(for: completedAt))
                 }.map(\.dayKey))
             }
@@ -146,41 +149,146 @@ public final class RoutineStore: @unchecked Sendable {
         }
     }
 
-    /// First completion wins, including its source. Early completion is allowed on the due date,
-    /// but never before that civil date. Reopen explicitly to choose a different outcome.
+    /// First result wins. Supplying a revision additionally rejects stale surfaces.
     public func complete(occurrenceID: String, outcome: CompletionOutcome = .full,
-                         source: CompletionSource? = nil, now: Date = Date()) throws {
+                         source: CompletionSource? = nil, expectedRevision: String? = nil,
+                         now: Date = Date()) throws {
         try checkDate(now)
         try transaction { state in
-            var occurrence = try self.requireOccurrence(occurrenceID, state: state)
-            guard !occurrence.isCompleted else { return ((), false) }
-            guard occurrence.canComplete(at: now, calendar: self.localDay.calendar) else {
-                throw RoutineStoreError.futureCompletion
-            }
-            if outcome == .light && occurrence.lightTarget == nil { throw RoutineStoreError.lightTargetUnavailable }
-            occurrence.outcome = outcome
-            occurrence.completedAt = now
-            occurrence.completionSource = source
+            let previous = try self.requireOccurrence(occurrenceID, state: state)
+            if let expectedRevision, previous.revision != expectedRevision { throw RoutineStoreError.staleAction }
+            guard !previous.isResolved else { return ((), false) }
+            let action: OccurrenceAction = outcome == .skipped ? .skip : .complete(outcome)
+            var next = previous
+            try self.apply(action, to: &next, source: source, now: now)
+            self.save(next, in: &state, now: now)
+            return ((), true)
+        }
+    }
+
+    public func reopen(occurrenceID: String, expectedRevision: String? = nil, now: Date = Date()) throws {
+        try checkDate(now)
+        try transaction { state in
+            let (habitID, _) = try self.parse(occurrenceID: occurrenceID)
+            _ = try self.index(of: habitID, in: state)
+            var occurrence = try state.records.first(where: { $0.id == occurrenceID })
+                ?? self.requireOccurrence(occurrenceID, state: state)
+            if let expectedRevision, occurrence.revision != expectedRevision { throw RoutineStoreError.staleAction }
+            guard occurrence.isResolved else { return ((), false) }
+            try self.apply(.reopen, to: &occurrence, source: nil, now: now)
             self.save(occurrence, in: &state, now: now)
             return ((), true)
         }
     }
 
-    public func reopen(occurrenceID: String, now: Date = Date()) throws {
+    /// Compare and mutate while holding the file lock. Tokens are valid for exactly one resulting version.
+    public func perform(_ action: OccurrenceAction, on snapshot: DailyOccurrence,
+                        source: CompletionSource = .app, requiringAgenda: Bool = false,
+                        now: Date = Date()) throws -> OccurrenceUndo {
+        try checkDate(now)
+        return try transaction { state in
+            let previous = try self.requireOccurrence(snapshot.id, state: state)
+            guard previous == snapshot else { throw RoutineStoreError.staleAction }
+            if requiringAgenda {
+                guard try self.agenda(at: now, state: state).occurrences.contains(where: { $0.id == snapshot.id })
+                else { throw RoutineStoreError.staleAction }
+            }
+            var next = previous
+            try self.apply(action, to: &next, source: source, now: now)
+            guard next != previous else { throw RoutineStoreError.staleAction }
+            next.mutationID = UUID()
+            self.save(next, in: &state, now: now, stampRevision: false)
+            return (OccurrenceUndo(previous: previous, resultingRevision: next.revision), true)
+        }
+    }
+
+    public func undo(_ token: OccurrenceUndo, now: Date = Date()) throws {
         try checkDate(now)
         try transaction { state in
-            // Repeated undo stays a no-op even after the first undo hides an archived record.
-            let (habitID, _) = try self.parse(occurrenceID: occurrenceID)
-            _ = try self.index(of: habitID, in: state)
-            var occurrence = try state.records.first(where: { $0.id == occurrenceID })
-                ?? self.requireOccurrence(occurrenceID, state: state)
-            guard occurrence.isCompleted else { return ((), false) }
-            occurrence.outcome = nil
-            occurrence.completedAt = nil
-            occurrence.completionSource = nil
-            self.save(occurrence, in: &state, now: now)
+            let current = try self.requireOccurrence(token.previous.id, state: state)
+            guard current.revision == token.resultingRevision else { throw RoutineStoreError.staleAction }
+            self.save(token.previous, in: &state, now: now)
             return ((), true)
         }
+    }
+
+    private func apply(_ action: OccurrenceAction, to occurrence: inout DailyOccurrence,
+                       source: CompletionSource?, now: Date) throws {
+        if case .reopen = action {
+            occurrence.outcome = nil
+            occurrence.completedAt = nil
+            occurrence.skippedAt = nil
+            occurrence.completionSource = nil
+            return
+        }
+        guard !occurrence.isResolved else { throw RoutineStoreError.completedOccurrence }
+        guard occurrence.canComplete(at: now, calendar: localDay.calendar) else { throw RoutineStoreError.futureCompletion }
+        switch action {
+        case .complete(let outcome):
+            guard outcome != .skipped else { throw RoutineStoreError.invalidOccurrence }
+            if outcome == .light && occurrence.lightTarget == nil { throw RoutineStoreError.lightTargetUnavailable }
+            occurrence.outcome = outcome
+            occurrence.completedAt = now
+            occurrence.completionSource = source
+        case .skip:
+            occurrence.outcome = .skipped
+            occurrence.skippedAt = now
+            occurrence.completionSource = source
+        case .later(let until, let zone):
+            guard until > now else { throw RoutineStoreError.invalidDueDate }
+            let due = OccurrenceDue.timed(at: until, timeZoneIdentifier: zone)
+            try validateDue(due, plannedDay: occurrence.dayKey)
+            occurrence.due = due
+            occurrence.deferredUntil = until
+        case .reopen: break
+        }
+    }
+
+    /// A local civil-day choice; no template targets are changed or generated.
+    public func setLightDay(_ enabled: Bool, matching snapshot: DailySummary, now: Date = Date()) throws {
+        try checkDate(now)
+        let key = localDay.key(for: now)
+        try transaction { state in
+            let current = try self.summary(dayKey: key, state: state)
+            guard snapshot.dayKey == key, current.modeRevision == snapshot.modeRevision else {
+                throw RoutineStoreError.staleAction
+            }
+            guard current.isLightDay != enabled else { return ((), false) }
+            var modes = state.dayModes ?? []
+            modes.removeAll { $0.dayKey == key }
+            modes.append(DayMode(dayKey: key, isLightDay: enabled, revision: UUID()))
+            state.dayModes = modes
+            return ((), true)
+        }
+    }
+
+    /// Today's original plan plus explicitly saved carryovers and overdue one-offs.
+    /// Past unrecorded recurring days are never manufactured as a backlog.
+    public func agenda(at now: Date = Date()) throws -> DailyAgenda {
+        try checkDate(now)
+        return try transaction { state in (try self.agenda(at: now, state: state), false) }
+    }
+
+    private func agenda(at now: Date, state: StoreDocument) throws -> DailyAgenda {
+        let key = localDay.key(for: now)
+        let today = try summary(dayKey: key, state: state)
+        var ids = Set(today.occurrences.map(\.id))
+        var items = today.occurrences
+        var candidates = state.records.filter { $0.dayKey < key }.map(\.id)
+        for habit in state.habits {
+            if case .once(let planned) = habit.revisions[0].definition.recurrence, planned < key {
+                candidates.append("\(habit.id.uuidString)|\(planned)")
+            }
+        }
+        for id in Set(candidates).sorted() where !ids.contains(id) {
+            let (habitID, planned) = try parse(occurrenceID: id)
+            let habit = state.habits[try index(of: habitID, in: state)]
+            guard let item = try occurrence(for: habit, on: planned, state: state),
+                  !item.isResolved || item.resolvedAt.map({ localDay.key(for: $0) == key }) == true else { continue }
+            items.append(item)
+            ids.insert(id)
+        }
+        return DailyAgenda(summary: today, occurrences: DailyAgenda.ordered(items, calendar: localDay.calendar))
     }
 
     /// Due-only changes may postpone overdue work. ID, targets and planned day are retained.
@@ -188,6 +296,7 @@ public final class RoutineStore: @unchecked Sendable {
         try mutatePending(occurrenceID, now: now) { occurrence, _ in
             try validateDue(due, plannedDay: occurrence.dayKey)
             occurrence.due = due
+            occurrence.deferredUntil = nil
         }
     }
 
@@ -206,6 +315,7 @@ public final class RoutineStore: @unchecked Sendable {
             occurrence.lightTarget = light
             occurrence.durationMinutes = durationMinutes
             occurrence.due = due
+            occurrence.deferredUntil = nil
         }
     }
 
@@ -267,7 +377,7 @@ public final class RoutineStore: @unchecked Sendable {
         try checkDate(now)
         try transaction { state in
             var occurrence = try self.requireOccurrence(id, state: state)
-            guard !occurrence.isCompleted else { throw RoutineStoreError.completedOccurrence }
+            guard !occurrence.isResolved else { throw RoutineStoreError.completedOccurrence }
             let index = try self.index(of: occurrence.habitID, in: state)
             let before = occurrence
             try body(&occurrence, max(self.localDay.key(for: now), state.habits[index].mutationDayKey))
@@ -277,7 +387,9 @@ public final class RoutineStore: @unchecked Sendable {
         }
     }
 
-    private func save(_ occurrence: DailyOccurrence, in state: inout StoreDocument, now: Date) {
+    private func save(_ snapshot: DailyOccurrence, in state: inout StoreDocument, now: Date, stampRevision: Bool = true) {
+        var occurrence = snapshot
+        if stampRevision { occurrence.mutationID = UUID() }
         if let index = state.records.firstIndex(where: { $0.id == occurrence.id }) { state.records[index] = occurrence }
         else { state.records.append(occurrence) }
         if let index = state.habits.firstIndex(where: { $0.id == occurrence.habitID }) {
@@ -300,7 +412,7 @@ public final class RoutineStore: @unchecked Sendable {
     private func occurrence(for habit: StoredHabit, on key: String, state: StoreDocument) throws -> DailyOccurrence? {
         let id = "\(habit.id.uuidString)|\(key)"
         let saved = state.records.first { $0.id == id }
-        if let saved, saved.isCompleted { return saved }
+        if let saved, saved.isResolved { return saved }
         guard habit.isActive(on: key) else { return nil }
         // Explicit pending overrides are pinned even if a later future schedule edit removes this weekday.
         if let saved { return saved }
@@ -318,7 +430,9 @@ public final class RoutineStore: @unchecked Sendable {
             if $0.dayPart != $1.dayPart { return $0.dayPart.sortOrder < $1.dayPart.sortOrder }
             return order[$0.habitID, default: 0] < order[$1.habitID, default: 0]
         }
-        return DailySummary(dayKey: dayKey, occurrences: result)
+        let mode = state.dayModes?.first { $0.dayKey == dayKey }
+        return DailySummary(dayKey: dayKey, occurrences: result, isLightDay: mode?.isLightDay ?? false,
+                            modeRevision: mode?.revision)
     }
 
     private func parse(occurrenceID: String) throws -> (UUID, String) {
@@ -352,7 +466,7 @@ public final class RoutineStore: @unchecked Sendable {
         }
         defer { _ = flock(descriptor, LOCK_UN) }
 
-        var (state, legacyBytes) = try readState()
+        var (state, legacyBytes, sourceVersion) = try readState()
         let (result, changed) = try body(&state)
         if changed || legacyBytes != nil {
             do { try state.validate() }
@@ -363,20 +477,21 @@ public final class RoutineStore: @unchecked Sendable {
                 encoder.dateEncodingStrategy = .deferredToDate
                 let data = try encoder.encode(state)
                 // All migration + operation validation/encoding has succeeded before touching disk.
-                if let legacyBytes { try preserveLegacyBytes(legacyBytes) }
+                if let legacyBytes, let sourceVersion { try preserveLegacyBytes(legacyBytes, version: sourceVersion) }
                 try saveSnapshot(data, fileURL)
             } catch { throw RoutineStoreError.fileAccess("Save data: \(error.localizedDescription)") }
         }
         return result
     }
 
-    private func preserveLegacyBytes(_ original: Data) throws {
+    private func preserveLegacyBytes(_ original: Data, version: Int) throws {
+        let migrationBackupURL = migrationBackupURL(from: version)
         if !FileManager.default.fileExists(atPath: migrationBackupURL.path) {
             try FileManager.default.copyItem(at: fileURL, to: migrationBackupURL)
             try configureFileProtection(at: migrationBackupURL)
         }
         guard try Data(contentsOf: migrationBackupURL) == original else {
-            throw RoutineStoreError.fileAccess("Existing v1 backup differs; preserve both files for recovery")
+            throw RoutineStoreError.fileAccess("Existing migration backup differs; preserve both files for recovery")
         }
     }
 
@@ -395,12 +510,12 @@ public final class RoutineStore: @unchecked Sendable {
         #endif
     }
 
-    private func readState() throws -> (StoreDocument, Data?) {
+    private func readState() throws -> (StoreDocument, Data?, Int?) {
         let data: Data
         do { data = try Data(contentsOf: fileURL) }
-        catch let error as CocoaError where error.code == .fileReadNoSuchFile { return (StoreDocument(), nil) }
+        catch let error as CocoaError where error.code == .fileReadNoSuchFile { return (StoreDocument(), nil, nil) }
         catch { throw RoutineStoreError.fileAccess("Read data: \(error.localizedDescription)") }
         let decoded = try StoreDocument.decode(data)
-        return (decoded.document, decoded.migrated ? data : nil)
+        return (decoded.document, decoded.sourceVersion != nil ? data : nil, decoded.sourceVersion)
     }
 }

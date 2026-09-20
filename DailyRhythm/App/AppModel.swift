@@ -11,7 +11,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var history: [DailySummary] = []
     @Published private(set) var loadError: String?
     @Published var operationError: String?
-    @Published private(set) var lastCompletedID: String?
+    @Published private(set) var lastUndo: OccurrenceUndo?
+    @Published private(set) var agenda: DailyAgenda?
     @Published private(set) var completionFeedback = 0
     @Published private(set) var refreshedAt = Date()
 
@@ -19,17 +20,19 @@ final class AppModel: ObservableObject {
     var archivedHabits: [Habit] { habits.filter { $0.archivedAt != nil } }
 
     var nextOccurrence: DailyOccurrence? {
-        today?.occurrences.first { $0.canComplete(at: refreshedAt) }
+        agenda?.next(at: refreshedAt)
     }
 
     func refresh() {
         do {
             let store = try SharedRoutineStore.makeStore()
             let now = Date()
-            let newToday = try store.summary(for: now)
+            let newAgenda = try store.agenda(at: now)
+            let newToday = newAgenda.summary
             let newHabits = try store.habits(includeArchived: true)
             let newHistory = try store.history(days: 7, endingOn: now)
             today = newToday
+            agenda = newAgenda
             habits = newHabits
             history = newHistory
             refreshedAt = now
@@ -48,29 +51,33 @@ final class AppModel: ObservableObject {
     }
 
     func complete(_ occurrence: DailyOccurrence, outcome: CompletionOutcome, requiringToday: Bool = true) {
-        guard occurrence.outcome == nil else { return }
-        if performMutation({
-            let store = try SharedRoutineStore.makeStore()
-            let now = Date()
-            if requiringToday {
-                guard try store.summary(for: now).dayKey == occurrence.dayKey else {
-                    refresh()
-                    throw AppActionError.dayChanged
-                }
-            }
-            try store.complete(occurrenceID: occurrence.id, outcome: outcome, source: .app, now: now)
-        }) {
-            lastCompletedID = occurrence.id
-            completionFeedback += 1
-        }
+        act(.complete(outcome), on: occurrence, requiringToday: requiringToday)
     }
 
-    func reopen(_ occurrenceID: String) {
+    func skip(_ occurrence: DailyOccurrence) { act(.skip, on: occurrence) }
+
+    func later(_ occurrence: DailyOccurrence) {
+        act(.later(until: Date().addingTimeInterval(3600), timeZoneIdentifier: TimeZone.current.identifier), on: occurrence)
+    }
+
+    func reopen(_ occurrence: DailyOccurrence) { act(.reopen, on: occurrence, requiringToday: false) }
+
+    func undoLastAction() {
+        guard let token = lastUndo else { return }
+        _ = performMutation { try SharedRoutineStore.makeStore().undo(token) }
+        lastUndo = nil
+    }
+
+    func setLightDay(_ enabled: Bool) {
+        guard let today else { return }
+        _ = performMutation { try SharedRoutineStore.makeStore().setLightDay(enabled, matching: today) }
+    }
+
+    private func act(_ action: OccurrenceAction, on occurrence: DailyOccurrence, requiringToday: Bool = true) {
         if performMutation({
-            try SharedRoutineStore.makeStore().reopen(occurrenceID: occurrenceID)
-        }), lastCompletedID == occurrenceID {
-            lastCompletedID = nil
-        }
+            lastUndo = try SharedRoutineStore.makeStore().perform(action, on: occurrence,
+                                                                  requiringAgenda: requiringToday)
+        }) { completionFeedback += 1 }
     }
 
     func archive(_ habit: Habit) {
@@ -113,16 +120,9 @@ final class AppModel: ObservableObject {
             return true
         } catch {
             operationError = error.localizedDescription
+            refresh()
             return false
         }
-    }
-}
-
-private enum AppActionError: LocalizedError {
-    case dayChanged
-
-    var errorDescription: String? {
-        "A new day has started. Today's steps have been refreshed; choose the step you want to record."
     }
 }
 

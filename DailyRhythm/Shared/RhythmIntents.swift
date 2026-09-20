@@ -101,28 +101,38 @@ struct CompleteWidgetOccurrenceIntent: AppIntent {
     @Parameter(title: "Daily Step") var occurrence: RhythmOccurrenceEntity
     @Parameter(title: "Use Small Step", default: false) var useSmallStep: Bool
 
+    // Explicit parameter survives AppEntity re-resolution on execution.
+    @Parameter(title: "Snapshot Revision") var snapshotRevision: String?
+
     init() {}
 
     init(occurrence: DailyOccurrence, useSmallStep: Bool = false) {
         self.occurrence = RhythmOccurrenceEntity(occurrence)
         self.useSmallStep = useSmallStep
+        self.snapshotRevision = occurrence.revision
     }
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        try completeStep(occurrence: occurrence, useSmallStep: useSmallStep, source: .widget)
+        try completeStep(occurrence: occurrence, useSmallStep: useSmallStep, source: .widget, expectedRevision: snapshotRevision)
         return .result(dialog: "Your step is recorded.")
     }
 }
 
-private func completeStep(occurrence: RhythmOccurrenceEntity, useSmallStep: Bool, source: CompletionSource) throws {
+private func completeStep(occurrence: RhythmOccurrenceEntity, useSmallStep: Bool, source: CompletionSource, expectedRevision: String? = nil) throws {
     let store = try SharedRoutineStore.makeStore()
     let now = Date()
-    let today = try store.summary(for: now)
-    guard today.dayKey == occurrence.dayKey,
-          let current = today.occurrences.first(where: { $0.id == occurrence.id }) else {
+    let agenda = try store.agenda(at: now)
+    guard let current = agenda.occurrences.first(where: { $0.id == occurrence.id }) else {
         WidgetCenter.shared.reloadTimelines(ofKind: SharedRoutineStore.widgetKind)
         throw SharedStoreError.staleOccurrence
     }
+    if source == .widget {
+        guard let expectedRevision, expectedRevision == current.revision, current.isReady(at: now) else {
+            WidgetCenter.shared.reloadTimelines(ofKind: SharedRoutineStore.widgetKind)
+            throw SharedStoreError.staleOccurrence
+        }
+    }
+    guard current.outcome != .skipped else { throw RoutineStoreError.completedOccurrence }
     guard !useSmallStep || current.lightTarget != nil else {
         throw SharedStoreError.noSmallStep
     }
@@ -130,31 +140,31 @@ private func completeStep(occurrence: RhythmOccurrenceEntity, useSmallStep: Bool
         occurrenceID: current.id,
         outcome: useSmallStep ? .light : .full,
         source: source,
+        expectedRevision: expectedRevision ?? current.revision,
         now: now
     )
     WidgetCenter.shared.reloadTimelines(ofKind: SharedRoutineStore.widgetKind)
 }
 
 struct ReopenOccurrenceIntent: AppIntent {
-    static let title: LocalizedStringResource = "Undo Daily Step"
-    static let description = IntentDescription("Remove today's completion so you can record it again.")
+    static let title: LocalizedStringResource = "Reopen Daily Step"
+    static let description = IntentDescription("Reopen a recorded or skipped step so you can record it again.")
     static let openAppWhenRun = false
 
     @Parameter(title: "Daily Step") var occurrence: RhythmOccurrenceEntity
 
     static var parameterSummary: some ParameterSummary {
-        Summary("Undo completion of \(\.$occurrence)")
+        Summary("Reopen \(\.$occurrence)")
     }
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let store = try SharedRoutineStore.makeStore()
-        let today = try store.summary()
-        guard today.dayKey == occurrence.dayKey,
-              today.occurrences.contains(where: { $0.id == occurrence.id }) else {
+        let agenda = try store.agenda()
+        guard let current = agenda.occurrences.first(where: { $0.id == occurrence.id }) else {
             WidgetCenter.shared.reloadTimelines(ofKind: SharedRoutineStore.widgetKind)
             throw SharedStoreError.staleOccurrence
         }
-        try store.reopen(occurrenceID: occurrence.id)
+        try store.reopen(occurrenceID: occurrence.id, expectedRevision: current.revision)
         WidgetCenter.shared.reloadTimelines(ofKind: SharedRoutineStore.widgetKind)
         return .result(dialog: "Your step is ready to record again.")
     }

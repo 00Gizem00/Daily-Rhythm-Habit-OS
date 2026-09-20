@@ -6,6 +6,7 @@ struct HistoryView: View {
 
     private var fullCount: Int { model.history.reduce(0) { $0 + $1.fullCount } }
     private var lightCount: Int { model.history.reduce(0) { $0 + $1.lightCount } }
+    private var skippedCount: Int { model.history.reduce(0) { $0 + $1.skippedCount } }
     private var plannedCount: Int { model.history.reduce(0) { $0 + $1.totalCount } }
 
     var body: some View {
@@ -34,6 +35,8 @@ struct HistoryView: View {
                             total(lightCount, label: "Light", symbol: "leaf.fill", colour: RhythmTheme.coral)
                             total(plannedCount, label: "Planned", symbol: "calendar", colour: RhythmTheme.muted)
                         }
+                        Text("\(skippedCount) skipped · not counted as completed")
+                            .font(.caption).foregroundStyle(RhythmTheme.muted).padding(.top, 12)
                     }
 
                     VStack(spacing: 12) {
@@ -107,7 +110,7 @@ private struct HistoryDayCard: View {
                         .foregroundStyle(RhythmTheme.ink)
                     Text(summary.totalCount == 0
                          ? "No steps planned"
-                         : "\(summary.fullCount) full · \(summary.lightCount) light · \(summary.totalCount - summary.completedCount) not recorded")
+                         : "\(summary.fullCount) full · \(summary.lightCount) light · \(summary.skippedCount) skipped · \(summary.remainingCount) pending")
                         .font(.caption)
                         .foregroundStyle(RhythmTheme.muted)
                     if summary.totalCount > 0 {
@@ -136,6 +139,7 @@ private struct HistoryDayCard: View {
         switch occurrence.outcome {
         case .full: "checkmark.circle.fill"
         case .light: "leaf.fill"
+        case .skipped: "forward.end.circle"
         case nil: "circle"
         }
     }
@@ -144,6 +148,7 @@ private struct HistoryDayCard: View {
         switch occurrence.outcome {
         case .full: RhythmTheme.leaf
         case .light: RhythmTheme.coral
+        case .skipped: RhythmTheme.muted
         case nil: RhythmTheme.muted
         }
     }
@@ -152,6 +157,7 @@ private struct HistoryDayCard: View {
         switch occurrence.outcome {
         case .full: "Full · \(occurrence.normalTarget)"
         case .light: "Light · \(occurrence.lightTarget ?? "Small step")"
+        case .skipped: "Skipped · not completed"
         case nil: "Not recorded · \(occurrence.normalTarget)"
         }
     }

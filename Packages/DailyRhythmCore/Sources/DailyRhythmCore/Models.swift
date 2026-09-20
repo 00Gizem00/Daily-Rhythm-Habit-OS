@@ -6,7 +6,7 @@ public enum DayPart: String, CaseIterable, Codable, Sendable {
     var sortOrder: Int { Self.allCases.firstIndex(of: self)! }
 }
 
-public enum CompletionOutcome: String, Codable, Sendable { case full, light }
+public enum CompletionOutcome: String, Codable, Sendable { case full, light, skipped }
 
 /// `appIntent` covers ordinary Shortcuts and Siri; those callers cannot be distinguished reliably.
 public enum CompletionSource: String, Codable, Sendable { case app, widget, appIntent }
@@ -146,14 +146,26 @@ public struct DailyOccurrence: Identifiable, Codable, Equatable, Sendable {
     /// Nil means unknown, including every migrated completion.
     public internal(set) var completionSource: CompletionSource?
 
-    public var isCompleted: Bool { outcome != nil }
+    public internal(set) var skippedAt: Date?
+    /// An explicit Later action suppresses Next Up until this instant.
+    public internal(set) var deferredUntil: Date?
+    public internal(set) var mutationID: UUID?
+
+    public var revision: String { mutationID?.uuidString ?? "unrecorded" }
+    public var isCompleted: Bool { outcome == .full || outcome == .light }
+    public var isResolved: Bool { outcome != nil }
+    public var resolvedAt: Date? { completedAt ?? skippedAt }
+
+    public func isReady(at now: Date, calendar: Calendar = .current) -> Bool {
+        canComplete(at: now, calendar: calendar) && (deferredUntil.map { $0 <= now } ?? true)
+    }
 
     public func canComplete(at now: Date = Date(), calendar: Calendar = .current) -> Bool {
-        !isCompleted && due.dayKey(calendar: calendar) <= due.currentDay(at: now, calendar: calendar)
+        !isResolved && due.dayKey(calendar: calendar) <= due.currentDay(at: now, calendar: calendar)
     }
 
     public func isOverdue(at now: Date = Date(), calendar: Calendar = .current) -> Bool {
-        guard !isCompleted else { return false }
+        guard !isResolved else { return false }
         switch due {
         case .dateOnly(let key): return key < LocalDay(calendar: calendar).key(for: now)
         case .timed(let date, _): return date < now
@@ -164,18 +176,21 @@ public struct DailyOccurrence: Identifiable, Codable, Equatable, Sendable {
 public struct DailySummary: Equatable, Sendable {
     public let dayKey: String
     public let occurrences: [DailyOccurrence]
+    public internal(set) var isLightDay = false
+    public internal(set) var modeRevision: UUID?
     public var totalCount: Int { occurrences.count }
     public var completedCount: Int { occurrences.filter(\.isCompleted).count }
     public var fullCount: Int { occurrences.filter { $0.outcome == .full }.count }
     public var lightCount: Int { occurrences.filter { $0.outcome == .light }.count }
-    public var remainingCount: Int { totalCount - completedCount }
+    public var skippedCount: Int { occurrences.filter { $0.outcome == .skipped }.count }
+    public var remainingCount: Int { totalCount - completedCount - skippedCount }
 }
 
 public enum RoutineStoreError: Error, Equatable, Sendable, LocalizedError {
     case invalidTitle, invalidTarget, invalidWeekdays, invalidHistoryRange, invalidOccurrence
     case invalidDueDate, invalidDuration, invalidEffectiveDate, unsupportedRecurrenceChange
     case completedOccurrence, habitNotFound, lightTargetUnavailable, futureCompletion, corruptData
-    case activeHabitLimitReached
+    case activeHabitLimitReached, staleAction
     case unsupportedVersion(Int)
     case fileAccess(String)
 
@@ -194,6 +209,7 @@ public enum RoutineStoreError: Error, Equatable, Sendable, LocalizedError {
         case .habitNotFound: "This habit could not be found."
         case .lightTargetUnavailable: "Add a smaller target before using Light Day."
         case .futureCompletion: "Future habits cannot be completed early."
+        case .staleAction: "This step has changed. Refresh and choose the action again."
         case .activeHabitLimitReached: HabitActivationPolicy.limitMessage
         case .corruptData: "Your saved data could not be read. It has been preserved."
         case .unsupportedVersion: "This data was saved by an unsupported app version. Update the app to continue."

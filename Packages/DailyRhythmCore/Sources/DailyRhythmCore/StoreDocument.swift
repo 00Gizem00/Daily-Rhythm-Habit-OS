@@ -31,31 +31,43 @@ struct StoredHabit: Codable {
 }
 
 struct StoreDocument: Codable {
-    var version = 2
+    var version = 3
     var habits: [StoredHabit] = []
     var records: [DailyOccurrence] = []
 
-    static func decode(_ data: Data) throws -> (document: Self, migrated: Bool) {
+    var dayModes: [DayMode]?
+
+    static func decode(_ data: Data) throws -> (document: Self, sourceVersion: Int?) {
         struct Header: Decodable { let version: Int }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .deferredToDate
         let version: Int
         do { version = try decoder.decode(Header.self, from: data).version }
         catch { throw RoutineStoreError.corruptData }
-        guard version == 1 || version == 2 else { throw RoutineStoreError.unsupportedVersion(version) }
+        guard (1...3).contains(version) else { throw RoutineStoreError.unsupportedVersion(version) }
         do {
-            let document = version == 1
+            var document = version == 1
                 ? try LegacyDocument.migrate(data, decoder: decoder)
                 : try decoder.decode(Self.self, from: data)
+            if version == 2 {
+                try validateV2Fields(data)
+                guard document.dayModes == nil, document.records.allSatisfy({
+                    $0.outcome != .skipped && $0.skippedAt == nil && $0.deferredUntil == nil && $0.mutationID == nil
+                }) else { throw RoutineStoreError.corruptData }
+            }
+            document.version = 3
             try document.validate()
-            return (document, version == 1)
+            return (document, version < 3 ? version : nil)
         } catch { throw RoutineStoreError.corruptData }
     }
 
     func validate() throws {
-        guard version == 2,
+        guard version == 3,
               Set(habits.map(\.id)).count == habits.count,
               Set(records.map(\.id)).count == records.count else { throw RoutineStoreError.corruptData }
+        let modes = dayModes ?? []
+        guard Set(modes.map(\.dayKey)).count == modes.count,
+              modes.allSatisfy({ validKey($0.dayKey) }) else { throw RoutineStoreError.corruptData }
         for habit in habits {
             guard validDate(habit.createdAt), validKey(habit.firstDayKey), validKey(habit.mutationDayKey),
                   habit.mutationDayKey >= habit.firstDayKey,
@@ -94,7 +106,10 @@ struct StoreDocument: Codable {
             guard let habit = byID[record.habitID], validKey(record.dayKey),
                   record.id == "\(record.habitID.uuidString)|\(record.dayKey)",
                   record.dayKey >= habit.firstDayKey,
-                  (record.outcome == nil) == (record.completedAt == nil),
+                  record.isCompleted == (record.completedAt != nil),
+                  (record.outcome == .skipped) == (record.skippedAt != nil),
+                  record.skippedAt.map(validDate) ?? true,
+                  record.deferredUntil.map({ validDate($0) && record.due.instant == $0 }) ?? true,
                   record.completedAt.map(validDate) ?? true,
                   record.outcome != nil || record.completionSource == nil,
                   record.outcome != .light || record.lightTarget != nil else {
@@ -190,5 +205,45 @@ extension HabitDefinition {
                 matchingPolicy: .nextTime, repeatedTimePolicy: .first, direction: .forward
               ), localDay.key(for: date) == key else { throw RoutineStoreError.invalidDueDate }
         return .timed(at: date, timeZoneIdentifier: time.timeZoneIdentifier)
+    }
+}
+
+/// An upgrade must not silently discard fields from an unfamiliar v2 writer.
+private func validateV2Fields(_ data: Data) throws {
+    func object(_ value: Any?, keys: Set<String>) throws -> [String: Any] {
+        guard let value = value as? [String: Any], Set(value.keys).isSubset(of: keys) else {
+            throw RoutineStoreError.corruptData
+        }
+        return value
+    }
+    func rows(_ value: Any?) throws -> [[String: Any]] {
+        guard let value = value as? [[String: Any]] else { throw RoutineStoreError.corruptData }
+        return value
+    }
+    func due(_ value: Any?) throws {
+        let due = try object(value, keys: ["dateOnly", "timed"])
+        if let date = due["dateOnly"] { _ = try object(date, keys: ["dayKey"]) }
+        if let time = due["timed"] { _ = try object(time, keys: ["at", "timeZoneIdentifier"]) }
+    }
+    let root = try object(JSONSerialization.jsonObject(with: data), keys: ["version", "habits", "records"])
+    for value in try rows(root["habits"]) {
+        let habit = try object(value, keys: ["id", "createdAt", "firstDayKey", "mutationDayKey", "revisions", "archiveIntervals"])
+        for value in try rows(habit["revisions"]) {
+            let revision = try object(value, keys: ["effectiveDayKey", "recordedAt", "definition"])
+            let definition = try object(revision["definition"], keys: ["title", "normalTarget", "lightTarget", "dayPart", "recurrence", "dueTime", "durationMinutes"])
+            let recurrence = try object(definition["recurrence"], keys: ["once", "weekly"])
+            if let once = recurrence["once"] { _ = try object(once, keys: ["dayKey"]) }
+            if let weekly = recurrence["weekly"] { _ = try object(weekly, keys: ["weekdays"]) }
+            if let time = definition["dueTime"], !(time is NSNull) {
+                _ = try object(time, keys: ["hour", "minute", "timeZoneIdentifier"])
+            }
+        }
+        for interval in try rows(habit["archiveIntervals"]) {
+            _ = try object(interval, keys: ["startDayKey", "archivedAt", "endDayKey", "restoredAt"])
+        }
+    }
+    for value in try rows(root["records"]) {
+        let record = try object(value, keys: ["id", "habitID", "dayKey", "title", "normalTarget", "lightTarget", "dayPart", "durationMinutes", "due", "outcome", "completedAt", "completionSource"])
+        try due(record["due"])
     }
 }
