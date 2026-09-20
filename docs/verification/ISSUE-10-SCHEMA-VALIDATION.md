@@ -2,9 +2,9 @@
 
 Tracking: [#10](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/issues/10). [SDK contract and mapping](../SIRI-SCHEMA-GATE.md).
 
-**Tested implementation commit:** `12ccb3f2138a9dccbda3f0d753120dbc338121af`, based on merged PR #38 (`0b79f86`). Subsequent branch changes only record evidence/documentation.
+**Initial tested implementation:** `12ccb3f2138a9dccbda3f0d753120dbc338121af`, based on merged PR #38 (`0b79f86`). **System-dispatch/indexing follow-up:** `aaed43a`, based on merged PR #40 (`189179a`). The initial adapter evidence below is preserved; the follow-up is recorded separately.
 
-**Status: SDK and native adapter gates pass; Siri/system-dispatch gate remains open.** Use **Refs #10**. The default product build excludes the experimental schemas; production #11 must not infer Siri availability from compilation or direct `perform()` calls.
+**Status: SDK, native adapter and unlocked system-dispatch checks pass. Real Siri creation and completion are user-confirmed; Siri reopen and lock/authentication gates remain open.** Use **Refs #10**. The default product build excludes the experimental schemas; production #11 must not infer Siri availability from compilation or direct `perform()` calls.
 
 ## Actual environment
 
@@ -62,13 +62,40 @@ At **10:29:29 UTC / 13:29:29 Europe/Istanbul**, the signed app's explicitly invo
 
 The device wrote a local JSON report under its app Documents directory; `devicectl device copy from --domain-type appDataContainer` retrieved only that known test report. No user store file was edited, replaced or copied to bypass the application's mutation service. The phone's existing shared data was preserved by the normal versioned store.
 
+## Follow-up: real Siri, system dispatch and reported closure
+
+Same phone/OS/toolchain, 20 September 2026. The user explicitly confirmed **Siri AI Beta is active** and previously confirmed English Siri. Region remains unconfirmed.
+
+| User-assisted check | Observed result |
+| --- | --- |
+| Earlier “Siri Test” creation | No matching item appeared in the app; no exact Siri response was captured. |
+| “Create a reminder called Rhythm Probe in Daily Rhythm” | Siri said it created the item; the user confirmed **Rhythm Probe appeared in Today**. Actual Siri creation passes for this phrase without an explicit due date. |
+| “Mark Rhythm Probe as completed in Daily Rhythm” before indexing | User reported Siri could not find it. Completion failed at discovery; this does not identify an adapter or crash cause. |
+| User-reported ordinary launch closure | User reported that the app also closed when opened normally. App process remained present, app-specific crash-log searches returned zero files, and no same-day Jetsam event appeared. These observations do not disprove an earlier crash. |
+| Controlled cold launch of the previously installed build | `devicectl --terminate-existing --console` launched successfully and remained running; user confirmed **Today stayed open**. Closure did not reproduce in this attempt. No crash fix is claimed. The test runner taking foreground is a possible explanation, not a confirmed diagnosis. |
+| Siri completion after indexing | User retried the same “Mark Rhythm Probe as completed in Daily Rhythm” phrase and confirmed **Siri completed it and the task appeared completed in the app**. |
+| Siri reopen after indexing | Retest requested; no result recorded yet. |
+
+Investigation found the opt-in reminder entity was not donated to Spotlight. The follow-up indexes active one-offs, refreshes pre-existing content on foreground entry, removes archived IDs and excludes archived tasks from resolution/update. A separate out-of-process test reproduced rejection of explicit `isFlagged: false`; the adapter now accepts nil/false and still rejects true before creating a task. Neither finding is presented as a proven cause of the earlier app closure.
+
+### Executed follow-up validation
+
+- **95 core XCTest cases passed**, zero failures (0.539 seconds).
+- Signed opt-in `build-for-testing` and default generic Simulator build both succeeded. Default extracted metadata includes ordinary `CreateHabitIntent` and excludes both schema intents and the hidden cleanup intent; opt-in metadata contains them. No Simulator/runtime changed.
+- **Four retained AppIntentsTesting tests passed on the physical phone**: list discovery; nil-flag create/query/Spotlight/complete/repeat/reopen/archive; the same flow with explicit false; and true-flag rejection with no task created. Stable occurrence identity, unchanged repeated-completion time, archived-query exclusion and Spotlight deletion are asserted.
+- The successful run executed **five tests, zero failures**, 0.918 seconds, because it also included a temporary recovery check for the single UUID-scoped fixture left by the initial outdated-build run. Recovery passed and that temporary test was removed; the four retained tests and app implementation are unchanged from the successful run. All diagnostic fixtures were archived through the normal API; the user's Rhythm Probe was not altered by these tests.
+- The initial run had harness issues: framework identifiers differed only by optional bundle qualification, and the installed app was older than the built app so cleanup was unavailable. Instance-ID assertions and explicit installation fixed the harness. A subsequent run isolated the actual false-flag rejection before the final passing run. Failed runs are not counted as passing evidence.
+- Project generation check and `git diff --check` passed. App was brought back to foreground after the runner finished. The test-runner app was then uninstalled; the real app and its store remain installed.
+
+Local evidence is under `/tmp/daily-rhythm-siri-investigation/`: `core-tests.log`, `final-build.log`, `recovery-build.log`, `default-build.log`, `dispatch-index.log` (reproduced false-flag failure), `dispatch-spotlight.log` / `.xcresult` (passing run), `cold-launch-console.log`, and scoped crash-list JSON. Raw diagnostic bundles/device identifiers are not committed. Reproduction commands are in [SIRI-SCHEMA-GATE.md](../SIRI-SCHEMA-GATE.md).
+
 ## Remaining gate
 
 Required before closing #10 or promoting #11:
 
-1. Confirm device region and demonstrated Siri AI schema availability. Siri/Apple Intelligence enabled and English language are user-reported.
-2. Invoke **Create Daily Rhythm Reminder** and **Update Daily Rhythm Reminder** through actual system dispatch, then through Siri with an explicit app name. Verify create → full completion → reopen and compare the app result.
+1. Confirm device region. Siri AI Beta and English are user-reported, and explicit-app Siri creation is demonstrated by the user-confirmed app result.
+2. Finish actual Siri **reopen** with an explicit app name and verify the saved app result. The corresponding unlocked system-dispatch sequence already passes; it does not substitute for Siri recognition.
 3. Exercise lock/authentication behaviour. Direct method calls do not validate `requiresLocalDeviceAuthentication` or background system execution.
 4. Record truthful unsupported/ambiguous routing results and the unresolved SSU training diagnostic's effect, if any.
 
-Device Hub UI automation still returns `-10005: timeoutReached` in this task; no alternative UI-event injection was used. The direct adapter runner solves the native persistence/mapping check, not that interaction limitation. No Siri availability, recognition or generic reminder routing is marked passed, and no production schema flag is enabled.
+Device Hub UI automation still returns `-10005: timeoutReached` in this task; no alternative UI-event injection was used. AppIntentsTesting covers out-of-process framework dispatch, and user-assisted checks cover actual Siri. Generic reminder routing, reopen recognition and lock behavior are not marked passed, and no production schema flag is enabled. The reported closure remains unconfirmed pending another reproducible event or crash report.
