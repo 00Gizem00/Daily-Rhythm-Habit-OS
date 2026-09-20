@@ -9,6 +9,7 @@ struct RhythmOccurrenceEntity: AppEntity {
 
     let id: String
     let title: String
+    let normalTarget: String
     let dayKey: String
     let dayPart: String
     let isCompleted: Bool
@@ -16,13 +17,14 @@ struct RhythmOccurrenceEntity: AppEntity {
     var displayRepresentation: DisplayRepresentation {
         DisplayRepresentation(
             title: "\(title)",
-            subtitle: "\(dayPart) · \(dayKey)\(isCompleted ? " · Recorded" : "")"
+            subtitle: "\(normalTarget) · \(dayPart) · \(dayKey)\(isCompleted ? " · Recorded" : "")"
         )
     }
 
     init(_ occurrence: DailyOccurrence) {
         id = occurrence.id
         title = occurrence.title
+        normalTarget = occurrence.normalTarget
         dayKey = occurrence.dayKey
         dayPart = occurrence.dayPart.rawValue.capitalized
         isCompleted = occurrence.outcome != nil
