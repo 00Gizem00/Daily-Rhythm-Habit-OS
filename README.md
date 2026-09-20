@@ -13,6 +13,7 @@ Daily Rhythm is an English-language native iOS app for small routines that survi
 - **Today / Next Up:** a clear next action and morning, afternoon and evening groups.
 - **Flexible targets:** record a full goal or a user-defined small step separately.
 - **Reliable history:** daily or selected-weekday recurrence, idempotent completion, undo, archive and seven-day history.
+- **Daily Close and weekly rhythm:** separate full/light/skipped/remaining totals, accessible day tiles and a read-only preview of tomorrow's first planned step. See [review verification](docs/verification/ISSUE-13-REVIEW-VALIDATION.md) for tests and pending visual checks.
 - **Shared local storage:** app, widget and intents use the same locked, atomically written App Group store.
 - **Widgets:** small and medium Home Screen widgets, plus Lock Screen progress.
 - **Siri Shortcuts:** create a habit, complete a daily step and undo a completion through ordinary App Intents.
