@@ -66,6 +66,8 @@ final class DataPrivacyModel: ObservableObject {
 
     func prepareRestore(from url: URL) {
         guard !busy, share == nil else { return }
+        error = nil
+        restorePreview = nil
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         do {
