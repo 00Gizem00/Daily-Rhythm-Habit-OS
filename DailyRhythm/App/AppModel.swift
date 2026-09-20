@@ -50,6 +50,10 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func createInitialRoutine(_ draft: OnboardingDraft) -> Bool {
+        performMutation { _ = try SharedRoutineStore.makeStore().createInitialRoutine(draft) }
+    }
+
     func complete(_ occurrence: DailyOccurrence, outcome: CompletionOutcome, requiringToday: Bool = true) {
         act(.complete(outcome), on: occurrence, requiringToday: requiringToday)
     }

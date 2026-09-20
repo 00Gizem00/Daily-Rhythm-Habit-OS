@@ -77,6 +77,34 @@ public final class RoutineStore: @unchecked Sendable {
         }
     }
 
+    /// First-run confirmation is atomic and retry-safe even if the process exits
+    /// after saving habits but before marking the UI flow finished. Draft IDs are
+    /// the persisted habit IDs; retries never rewrite a habit that was later edited.
+    @discardableResult
+    public func createInitialRoutine(_ draft: OnboardingDraft, now: Date = Date()) throws -> [Habit] {
+        try checkDate(now)
+        guard (1...3).contains(draft.entries.count), Set(draft.entries.map(\.id)).count == draft.entries.count else {
+            throw RoutineStoreError.invalidOnboardingDraft
+        }
+        let key = localDay.key(for: now)
+        let habits = try draft.entries.map { entry in
+            let definition = try entry.form.definition()
+            guard definition.recurrence.isRecurring else { throw RoutineStoreError.invalidOnboardingDraft }
+            return StoredHabit(id: entry.id, createdAt: now, firstDayKey: key, mutationDayKey: key,
+                               revisions: [HabitRevision(effectiveDayKey: key, recordedAt: now, definition: definition)],
+                               archiveIntervals: [])
+        }
+        return try transaction { state in
+            let ids = Set(habits.map(\.id))
+            let existing = state.habits.filter { ids.contains($0.id) }
+            if existing.count == habits.count { return (existing.map { $0.snapshot(on: key) }, false) }
+            guard state.habits.isEmpty else { throw RoutineStoreError.onboardingAlreadyStarted }
+            try self.validateActivation(of: habits, in: state)
+            state.habits.append(contentsOf: habits)
+            return (habits.map { $0.snapshot(on: key) }, true)
+        }
+    }
+
     /// Full definition replacement, effective strictly after today and the last mutation's civil date.
     /// Existing future revisions after this date remain in force. An occurrence override takes precedence.
     public func editHabit(habitID: UUID, definition: HabitDefinition, effectiveDayKey: String,
