@@ -46,9 +46,11 @@ Environment: Apple Silicon macOS **27.0 (26A428)**, Xcode **27.0 (27A266a)**, Sw
 | Generated project | Regenerated after adding DataPrivacyView; `python3 scripts/generate_project.py --check` passed. |
 | Source-membership regression suite | **4 Python tests passed**. Guard and build-script sandbox remain enabled. |
 | Signed default and opt-in schema builds | Both **BUILD SUCCEEDED**; strict deep signature verification passed. The schema variant uses the existing `DAILY_RHYTHM_SCHEMA_SPIKE` flag; no new Siri routing claim. |
-| User's Xcode session | Closed/reopened DailyRhythm without discarding edits, preserving **XREI-0001**. Xcode Build showed **Build Succeeded** after loading the generated project. Native UI access subsequently disconnected, so the final typed-confirmation/recovery changes have command-line build evidence only. |
+| User's Xcode session | Closed/reopened DailyRhythm without discarding edits, preserving **XREI-0001**. After reconnecting native UI access, Xcode Build showed **Build Succeeded at 16:36** for the final recovery/typed-confirmation source. |
 | Physical install/launch | Opt-in build installed and launched on **XREI-0001 / iPhone 16 / iOS 27.0 (24A437)** after the user reconnected it. No Simulator was selected, booted, reset, created or deleted. |
 | Actual share / erase / Cancel interaction | **User-reported:** JSON was successfully shared to the user's own WhatsApp conversation and erasure completed using the original confirmation. Device Hub UI access timed out, so this was not directly observed. The final typed-confirmation screen and Cancel path remain unverified on device. Full post-erase storage/widget verification is still pending. |
+| User-provided backup validation / recovery staging | The supplied JSON passes the production decoder. A separate local comparison confirmed every non-identity field is preserved, normalizing only the order of weekday sets. Final recovery build and source file are staged on the selected iPhone. Execution is currently blocked by the phone being locked; no restoration pass is claimed yet. The original export is unchanged and private contents are not committed. |
+| GitHub Actions | [Run #77](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/actions/runs/35513970812) did not start its job because the account is locked due to a billing issue. The run's annotation was checked directly. Local test/build results above are not a claim of green CI. |
 
 Commands:
 
