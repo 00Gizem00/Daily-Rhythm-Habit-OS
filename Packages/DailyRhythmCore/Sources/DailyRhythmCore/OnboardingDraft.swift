@@ -15,8 +15,11 @@ public struct OnboardingEntry: Codable, Equatable, Identifiable, Sendable {
 /// This draft does not write habits; the store's atomic confirmation is the only Apply path.
 public struct OnboardingDraft: Codable, Equatable, Sendable {
     public var entries: [OnboardingEntry]
+    public var generation: UUID?
 
-    public init(template: OnboardingTemplate, now: Date = Date(), calendar: Calendar = .current) {
+    public init(template: OnboardingTemplate, now: Date = Date(), calendar: Calendar = .current,
+                generation: UUID = RoutineDataLifecycle.initialGeneration) {
+        self.generation = generation
         let definitions: [HabitDefinition]
         switch template {
         case .morning:

@@ -29,7 +29,10 @@ final class OnboardingPreferences: ObservableObject {
     func pause() { update { if $0.status != .finished { $0.status = .skipped } } }
     func finish() { update { $0.status = .finished; $0.draft = nil } }
     func choose(_ template: OnboardingTemplate) {
-        update { $0.status = .inProgress; $0.draft = OnboardingDraft(template: template) }
+        do {
+            let generation = try SharedRoutineStore.makeStore().validateAccess()
+            update { $0.status = .inProgress; $0.draft = OnboardingDraft(template: template, generation: generation) }
+        } catch { loadError = error.localizedDescription }
     }
     func updateEntry(id: UUID, form: HabitFormDraft) {
         update { progress in
@@ -47,11 +50,19 @@ final class OnboardingPreferences: ObservableObject {
 
     private func update(_ body: (inout OnboardingProgress) -> Void) {
         guard loadError == nil else { return }
+        do { _ = try SharedRoutineStore.makeStore().validateAccess() }
+        catch { loadError = error.localizedDescription; return }
         var next = progress
         body(&next)
         guard next != progress else { return }
         guard let data = try? JSONEncoder().encode(next) else { return }
         defaults.set(data, forKey: key)
         progress = next
+    }
+
+    func clearForErasure() {
+        defaults.removeObject(forKey: key)
+        progress = .init()
+        loadError = nil
     }
 }

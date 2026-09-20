@@ -11,6 +11,7 @@ struct AddHabitView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var draft: HabitFormDraft
     @State private var saveError: String?
+    @State private var generation: UUID?
 
     init(readingTemplate: Bool = false) {
         _draft = State(initialValue: HabitFormDraft(definition: HabitDefinition(
@@ -46,17 +47,23 @@ struct AddHabitView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Create") { save() }.fontWeight(.semibold)
+                    Button("Create") { save() }.fontWeight(.semibold).disabled(generation == nil)
                 }
             }
             .modifier(FormSaveError(message: $saveError))
+            .task {
+                guard generation == nil else { return }
+                do { generation = try SharedRoutineStore.makeStore().validateAccess() }
+                catch { saveError = error.localizedDescription }
+            }
         }
     }
 
     private func save() {
         do {
             let definition = try draft.definition()
-            if model.addHabit(definition) { dismiss() }
+            guard let generation else { throw LocalDataError.staleAction }
+            if model.addHabit(definition, expectedGeneration: generation) { dismiss() }
             else { saveError = model.operationError; model.operationError = nil }
         } catch { saveError = error.localizedDescription }
     }

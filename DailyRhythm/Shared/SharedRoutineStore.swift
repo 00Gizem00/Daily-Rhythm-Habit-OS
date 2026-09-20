@@ -6,10 +6,10 @@ import DailyRhythmCore
 enum SharedRoutineStore {
     static let widgetKind = "DailyRhythmToday"
 
-    static func makeStore() throws -> RoutineStore {
+    static func makeStore(expectedGeneration: UUID? = nil) throws -> RoutineStore {
         // A future verified StoreKit provider belongs at this shared composition point.
         RoutineStore(fileURL: try containerURL().appendingPathComponent("daily-rhythm.json"),
-                     entitlementProvider: FreeHabitEntitlementProvider())
+                     entitlementProvider: FreeHabitEntitlementProvider(), expectedGeneration: expectedGeneration)
     }
 
     static func containerURL() throws -> URL {

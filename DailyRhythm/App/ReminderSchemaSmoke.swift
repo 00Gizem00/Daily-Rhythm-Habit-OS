@@ -16,6 +16,7 @@ enum ReminderSchemaSmoke {
         guard !started, let request = ProcessInfo.processInfo.environment["DAILY_RHYTHM_SCHEMA_SMOKE"],
               let runID = UUID(uuidString: request) else { return }
         started = true
+        guard let reportStore = try? SharedRoutineStore.makeStore() else { return }
         let reportURL = URL.documentsDirectory.appendingPathComponent("schema-smoke-\(runID.uuidString).json")
         guard !FileManager.default.fileExists(atPath: reportURL.path) else { return }
         var report: [String: Any] = [
@@ -27,7 +28,7 @@ enum ReminderSchemaSmoke {
         ]
         func writeReport() throws {
             let data = try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
-            try data.write(to: reportURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            try reportStore.writeAuxiliaryData(data, to: reportURL)
         }
         var testHabitID: UUID?
         do {
