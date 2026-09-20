@@ -35,6 +35,8 @@ Widget completion carries the exact occurrence ID displayed. The intent checks t
 
 The store is shared through `group.com.lumetechllc.DailyRhythm`. The app and extension read the configured identifier from `DailyRhythmAppGroup` in their Info.plist. Physical-device signing must grant both targets the same group. There is no separate fallback database.
 
+The [issue #4 device matrix](verification/ISSUE-4-DEVICE-VALIDATION.md) records physical-device provisioning and cross-surface checks separately from the Simulator smoke test below. The first device build exposed an account configuration failure: App Groups capability was enabled, but neither app ID had a group assigned. Both explicit development profiles therefore contained an empty group list. Register and assign the exact group to both app IDs before refreshing profiles; do not remove the entitlement or introduce a second store to get past signing.
+
 ## AI and Dynamic Island follow-up
 
 1. Validate the official reminder schemas against the current Xcode 27 SDK and a Siri AI-enabled physical device. Map creation and `updateReminder` completion onto the same mutation service.

@@ -25,7 +25,7 @@ Requirements: **Xcode 16 or later**, Swift 6 and an iOS 18+ simulator or device.
 
 1. Open `DailyRhythm.xcodeproj`.
 2. Select the **DailyRhythm** scheme and an iPhone simulator.
-3. For a physical device, select your development team for both app and widget targets. Register/enable the same App Group, `group.com.lumetechllc.DailyRhythm`, for both bundle IDs. If you change it, update the project's `APP_GROUP_IDENTIFIER` build setting too.
+3. For a physical device, select your development team for both app and widget targets. Register the App Group `group.com.lumetechllc.DailyRhythm` and explicitly assign it to **both** `com.lumetechllc.DailyRhythm` and `com.lumetechllc.DailyRhythm.Widgets` in Apple Developer. Enabling the App Groups capability alone is insufficient: each App ID must have this group selected, and its development profile must be regenerated after assignment. If you change the group, update the project's `APP_GROUP_IDENTIFIER` build setting too.
 4. Run the app, add a habit, then add a Daily Rhythm widget to the Home Screen.
 
 The app intentionally reports a storage error if the App Group cannot be opened. It never silently creates a second store that diverges from the widget.
@@ -69,3 +69,5 @@ The Xcode project is checked in. After adding or removing Swift source files, ru
 Official **iOS 27 Siri AI App Schemas**, optional **PCC Build My Routine**, and **Routine Sessions with Live Activities / Dynamic Island** remain planned. The current Shortcuts implementation does not claim schema-driven Siri AI integration. StoreKit, notification scheduling, data export and habit editing are also outside this first slice.
 
 Read the [product plan](docs/PRODUCT_PLAN.md) and [implementation notes](docs/IMPLEMENTATION.md) for architecture, remaining work and device checks.
+
+Physical-device shared-storage validation is tracked in the [issue #4 device matrix](docs/verification/ISSUE-4-DEVICE-VALIDATION.md). Pending rows are not release evidence.
