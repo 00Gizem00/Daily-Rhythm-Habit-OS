@@ -8,6 +8,7 @@
 - [Tester guide](TESTER-GUIDE.md)
 - [Feedback and decision templates](FEEDBACK-TEMPLATE.md)
 - [Privacy/support draft and missing owner information](PRIVACY-SUPPORT-DRAFT.md)
+- [Support and privacy HTML previews](web-preview/README.md) — local review assets; public URLs still pending.
 
 ## Upload and distribution runbook
 

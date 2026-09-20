@@ -12,4 +12,6 @@ Organizer: send this only after the candidate and distribution are approved. Pro
 
 The beta has no account, cloud sync, AI routine generation or purchase flow. The prototype of new schema-driven Siri AI is not included. Your local data may be included in device backups managed by your iOS settings. Copies you save elsewhere are under your control and are not removed by app erasure.
 
+TestFlight itself automatically collects crash logs and usage information and shares them with the app provider, independently of the optional local diagnostics toggle. Apple does not offer an opt-out for that collection while testing through TestFlight. [Apple's TestFlight privacy information](https://www.apple.com/legal/privacy/data/en/test-flight/).
+
 You can stop participating or decline any report. Ask the organizer to remove reports/contact details you previously shared through the agreed private feedback route.

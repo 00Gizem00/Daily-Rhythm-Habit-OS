@@ -6,6 +6,8 @@ Status: not recruiting, not scheduled, no invitations sent. Start only after the
 
 Use a participant code; keep any code-to-contact mapping privately with the organizer, never in this repository. Participation, reminders and diagnostic sharing are separate opt-ins. Declining diagnostics must not prevent participation. Let people skip questions or withdraw. Do not ask for habit titles, goals, personal prompts, raw routine backups or precise location. Avoid sensitive sample routines.
 
+Before inviting anyone, explain that TestFlight automatically collects crash logs and usage information and shares them with the app provider. That collection has no TestFlight opt-out and is separate from the app's optional local observation/report sharing. Include [Apple's TestFlight privacy information](https://www.apple.com/legal/privacy/data/en/test-flight/) in the invitation materials. Declining the app's diagnostics does not disable TestFlight's collection.
+
 Before sharing, explain that optional reports contain relative daily completion counts, source buckets, failure categories and available setup duration. The organizer can associate a report with its participant code, so do not call it anonymous. Record a proposed retention period of **30 days after the final pilot decision** for organizer-held reports/contact mapping, then delete them; the owner must confirm this policy and the private collection destination before recruitment. App-local retention and external report retention are separate.
 
 ## Schedule

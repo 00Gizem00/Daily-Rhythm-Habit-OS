@@ -14,9 +14,13 @@ You can explicitly export routine JSON/CSV or diagnostic JSON and choose a desti
 
 Erase Local Data removes local routines, history, preferences, owned notifications, setup state, diagnostics and other app-owned cleanup files. It is permanent; a previously saved JSON backup can restore data into an empty app. Small non-personal coordination/recovery files remain to reject outdated actions and recover interrupted erasure. iOS permissions and backups are managed separately through device settings.
 
-If you install through TestFlight or send beta feedback, Apple and the developer may receive TestFlight feedback/diagnostic information under the applicable TestFlight settings and terms. Reports that you voluntarily send to the organizer can be associated with your feedback contact or participant code. Such handling must be explained in the organizer's confirmed policy; it is separate from the app's absence of automatic upload.
+TestFlight automatically collects crash logs and usage information and shares them with the app provider; Apple does not offer an opt-out for that collection while testing through TestFlight. This is separate from Daily Rhythm's optional local diagnostics. Feedback you choose to send through TestFlight is also shared with the app provider and may be associated with your name and email. [Apple's TestFlight privacy information](https://www.apple.com/legal/privacy/data/en/test-flight/).
+
+Reports that you voluntarily send to the organizer can be associated with your feedback contact or participant code. Such handling must be explained in the organizer's confirmed policy; it is separate from the app's absence of automatic upload.
 
 ## Support page draft
+
+The [rendered support preview](web-preview/index.html) and [privacy preview](web-preview/privacy.html) contain the review copy as accessible, responsive HTML. They are local review assets, not live support/policy URLs. See [preview instructions and publication gaps](web-preview/README.md).
 
 Contact **Contact@lumetechllc.com** for support and beta feedback. Include: product/version scope, backup/restore steps from the tester guide, optional diagnostic export instructions, and how to ask for deletion of organizer-held reports. Do not request full routine backups by default. For missing data, keep the app and source files intact, note version/build, and seek support before erasing or reinstalling.
 
