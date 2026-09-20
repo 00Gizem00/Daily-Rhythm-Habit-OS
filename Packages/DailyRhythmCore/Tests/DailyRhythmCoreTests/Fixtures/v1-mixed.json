@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "habits": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "title": "Read",
+      "normalTarget": "10 pages",
+      "lightTarget": "2 pages",
+      "dayPart": "morning",
+      "weekdays": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "createdAt": 811414800.123456,
+      "firstDayKey": "2026-09-18"
+    },
+    {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "title": "Read",
+      "normalTarget": "One step",
+      "dayPart": "evening",
+      "weekdays": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "createdAt": 811422000.654321,
+      "firstDayKey": "2026-09-18",
+      "archivedAt": 811602000.234567,
+      "archiveDayKey": "2026-09-20"
+    },
+    {
+      "id": "33333333-3333-4333-8333-333333333333",
+      "title": "Walk",
+      "normalTarget": "20 minutes",
+      "dayPart": "afternoon",
+      "weekdays": [
+        2,
+        4,
+        6
+      ],
+      "createdAt": 811411200.0,
+      "firstDayKey": "2026-09-18"
+    }
+  ],
+  "records": [
+    {
+      "title": "Read",
+      "normalTarget": "10 pages",
+      "dayPart": "morning",
+      "lightTarget": "2 pages",
+      "id": "11111111-1111-4111-8111-111111111111|2026-09-18",
+      "habitID": "11111111-1111-4111-8111-111111111111",
+      "dayKey": "2026-09-18",
+      "outcome": "full",
+      "completedAt": 811418400.123456
+    },
+    {
+      "title": "Read",
+      "normalTarget": "10 pages",
+      "dayPart": "morning",
+      "lightTarget": "2 pages",
+      "id": "11111111-1111-4111-8111-111111111111|2026-09-19",
+      "habitID": "11111111-1111-4111-8111-111111111111",
+      "dayKey": "2026-09-19",
+      "outcome": "light",
+      "completedAt": 811504800.654321
+    },
+    {
+      "title": "Read",
+      "normalTarget": "10 pages",
+      "dayPart": "morning",
+      "lightTarget": "2 pages",
+      "id": "11111111-1111-4111-8111-111111111111|2026-09-20",
+      "habitID": "11111111-1111-4111-8111-111111111111",
+      "dayKey": "2026-09-20"
+    },
+    {
+      "title": "Read",
+      "normalTarget": "One step",
+      "dayPart": "evening",
+      "id": "22222222-2222-4222-8222-222222222222|2026-09-20",
+      "habitID": "22222222-2222-4222-8222-222222222222",
+      "dayKey": "2026-09-20",
+      "outcome": "full",
+      "completedAt": 811591200.234567
+    }
+  ]
+}

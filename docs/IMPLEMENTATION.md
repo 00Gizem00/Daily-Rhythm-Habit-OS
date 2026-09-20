@@ -15,15 +15,13 @@ This milestone establishes a local habit loop that the future Siri AI and PCC fe
 
 ## Data and concurrency
 
-Each habit has a UUID and a weekday schedule. Each occurrence has a stable ID made from the habit UUID and its local civil date. The store derives occurrences when read, so tomorrow does not require a background task to run at midnight.
+The core now uses version 2 of the JSON model, with one-off or weekly recurrence, distinct date-only/timed due values, optional numeric durations, effective-dated revisions, occurrence overrides and archive/restore intervals. Existing creation screens and Shortcuts continue to use their original repeating, date-only options. See [MODEL-V2.md](MODEL-V2.md) for the supported rules, API contracts and recovery procedure.
 
-Completions retain the occurrence's target and full/light outcome. Repeating completion is a no-op: the first successful outcome and timestamp are retained until the user explicitly reopens the occurrence. Archives retain earlier history and completed work. Editing schedules and targets is not exposed yet, so the first format does not need to reinterpret old edited schedules.
+Occurrence identity remains the habit UUID plus its original planned civil date. Postponing changes its due value without moving the historical denominator. Future edits select a new effective revision and preserve previous planned days, including those never completed. Saved completions own their target snapshots; first completion retains its outcome, timestamp and source until explicitly reopened. Migrated records have unknown source.
 
-Every reader/writer acquires a POSIX advisory lock on a separate stable lock file, reloads the latest JSON and atomically replaces it only after a successful mutation. Locking the JSON inode itself would be unsafe because atomic replacement changes the inode. App, widget and intents must all use `RoutineStore`; writing the JSON directly is unsupported.
+Every reader/writer acquires a POSIX advisory lock on a separate stable lock file, reloads the latest JSON and atomically replaces it only after successful validation. The first successful v1 operation uses that same lock to preserve an exact `.v1-backup` before migrating. Unknown versions, invalid records and read/write failures never trigger an empty-store replacement. App, widget and intents must all use `RoutineStore`.
 
-Unknown schema versions, invalid records, failed reads and failed writes produce errors. They never trigger an empty-store replacement. Version 1 is deliberately explicit; future schema changes require migration code.
-
-Date keys follow a Gregorian local civil day in the configured time zone. The app creates a fresh store when refreshing so timezone changes take effect. History follows recorded date keys rather than moving yesterday's completions when the user travels. Calendar-based day arithmetic handles 23/25-hour daylight-saving days.
+Date-only keys follow Gregorian civil dates. Timed schedules explicitly retain their timezone, resolve DST gaps to the next valid time and repeated times to the first instant. Travel never changes saved IDs or completion dates. Calendar-based history arithmetic handles 23/25-hour days. See the model document for overdue work, postponement and archive boundaries.
 
 The first implementation is for small personal habit sets. Whole-file JSON transactions avoid a database dependency; benchmark and migrate before adding large imports or long histories. UI refreshes on foregrounding and periodically while active. Widget reload requests remain subject to WidgetKit scheduling.
 

@@ -85,31 +85,54 @@ struct CompleteOccurrenceIntent: AppIntent {
 
     init() {}
 
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        try completeStep(occurrence: occurrence, useSmallStep: useSmallStep, source: .appIntent)
+        return .result(dialog: "Your step is recorded.")
+    }
+}
+
+/// A separate, undiscoverable intent identifies a widget action without guessing its
+/// origin from the process that iOS chooses to execute it in.
+struct CompleteWidgetOccurrenceIntent: AppIntent {
+    static let title: LocalizedStringResource = "Complete Widget Step"
+    static let isDiscoverable = false
+    static let openAppWhenRun = false
+
+    @Parameter(title: "Daily Step") var occurrence: RhythmOccurrenceEntity
+    @Parameter(title: "Use Small Step", default: false) var useSmallStep: Bool
+
+    init() {}
+
     init(occurrence: DailyOccurrence, useSmallStep: Bool = false) {
         self.occurrence = RhythmOccurrenceEntity(occurrence)
         self.useSmallStep = useSmallStep
     }
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let store = try SharedRoutineStore.makeStore()
-        let now = Date()
-        let today = try store.summary(for: now)
-        guard today.dayKey == occurrence.dayKey,
-              let current = today.occurrences.first(where: { $0.id == occurrence.id }) else {
-            WidgetCenter.shared.reloadTimelines(ofKind: SharedRoutineStore.widgetKind)
-            throw SharedStoreError.staleOccurrence
-        }
-        guard !useSmallStep || current.lightTarget != nil else {
-            throw SharedStoreError.noSmallStep
-        }
-        try store.complete(
-            occurrenceID: current.id,
-            outcome: useSmallStep ? .light : .full,
-            now: now
-        )
-        WidgetCenter.shared.reloadTimelines(ofKind: SharedRoutineStore.widgetKind)
+        try completeStep(occurrence: occurrence, useSmallStep: useSmallStep, source: .widget)
         return .result(dialog: "Your step is recorded.")
     }
+}
+
+private func completeStep(occurrence: RhythmOccurrenceEntity, useSmallStep: Bool, source: CompletionSource) throws {
+    let store = try SharedRoutineStore.makeStore()
+    let now = Date()
+    let today = try store.summary(for: now)
+    guard today.dayKey == occurrence.dayKey,
+          let current = today.occurrences.first(where: { $0.id == occurrence.id }) else {
+        WidgetCenter.shared.reloadTimelines(ofKind: SharedRoutineStore.widgetKind)
+        throw SharedStoreError.staleOccurrence
+    }
+    guard !useSmallStep || current.lightTarget != nil else {
+        throw SharedStoreError.noSmallStep
+    }
+    try store.complete(
+        occurrenceID: current.id,
+        outcome: useSmallStep ? .light : .full,
+        source: source,
+        now: now
+    )
+    WidgetCenter.shared.reloadTimelines(ofKind: SharedRoutineStore.widgetKind)
 }
 
 struct ReopenOccurrenceIntent: AppIntent {

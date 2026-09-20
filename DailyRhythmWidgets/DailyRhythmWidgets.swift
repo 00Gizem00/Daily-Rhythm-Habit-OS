@@ -175,7 +175,7 @@ private struct RhythmWidgetView: View {
                     .privacySensitive()
                 Spacer(minLength: 0)
                 HStack(spacing: 6) {
-                    Button(intent: CompleteOccurrenceIntent(occurrence: next)) {
+                    Button(intent: CompleteWidgetOccurrenceIntent(occurrence: next)) {
                         Label("Done", systemImage: "checkmark")
                             .font(.caption.weight(.semibold))
                     }
@@ -183,7 +183,7 @@ private struct RhythmWidgetView: View {
                     .tint(leaf)
                     .accessibilityLabel("Complete \(next.title): \(next.normalTarget)")
                     if let lightTarget = next.lightTarget {
-                        Button(intent: CompleteOccurrenceIntent(occurrence: next, useSmallStep: true)) {
+                        Button(intent: CompleteWidgetOccurrenceIntent(occurrence: next, useSmallStep: true)) {
                             Image(systemName: "leaf")
                                 .font(.caption.weight(.semibold))
                         }
@@ -267,7 +267,7 @@ private struct RhythmWidgetView: View {
                                     .foregroundStyle(step.outcome == .light ? coral : leaf)
                                     .accessibilityLabel(step.outcome == .light ? "Small step completed" : "Completed")
                             } else {
-                                Button(intent: CompleteOccurrenceIntent(occurrence: step)) {
+                                Button(intent: CompleteWidgetOccurrenceIntent(occurrence: step)) {
                                     Image(systemName: "checkmark.circle")
                                         .font(.title3)
                                         .padding(3)
