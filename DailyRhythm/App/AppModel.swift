@@ -8,7 +8,7 @@ import WidgetKit
 final class AppModel: ObservableObject {
     @Published private(set) var today: DailySummary?
     @Published private(set) var habits: [Habit] = []
-    @Published private(set) var history: [DailySummary] = []
+    @Published private(set) var review: RhythmReview?
     @Published private(set) var loadError: String?
     @Published var operationError: String?
     @Published private(set) var lastUndo: OccurrenceUndo?
@@ -27,14 +27,11 @@ final class AppModel: ObservableObject {
         do {
             let store = try SharedRoutineStore.makeStore()
             let now = Date()
-            let newAgenda = try store.agenda(at: now)
-            let newToday = newAgenda.summary
-            let newHabits = try store.habits(includeArchived: true)
-            let newHistory = try store.history(days: 7, endingOn: now)
-            today = newToday
-            agenda = newAgenda
-            habits = newHabits
-            history = newHistory
+            let snapshot = try store.review(at: now)
+            review = snapshot
+            today = snapshot.agenda.summary
+            agenda = snapshot.agenda
+            habits = snapshot.habits
             refreshedAt = now
             loadError = nil
         } catch {
@@ -183,11 +180,11 @@ enum RhythmDates {
     }
 
     static func dayLabel(_ dayKey: String) -> String {
+        guard let date = LocalDay.utc.date(for: dayKey) else { return dayKey }
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.dateFormat = "yyyy-MM-dd"
-        guard let date = formatter.date(from: dayKey) else { return dayKey }
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
         formatter.dateFormat = "EEE, d MMM yyyy"
         return formatter.string(from: date)
     }

@@ -4,11 +4,6 @@ import SwiftUI
 struct HistoryView: View {
     @EnvironmentObject private var model: AppModel
 
-    private var fullCount: Int { model.history.reduce(0) { $0 + $1.fullCount } }
-    private var lightCount: Int { model.history.reduce(0) { $0 + $1.lightCount } }
-    private var skippedCount: Int { model.history.reduce(0) { $0 + $1.skippedCount } }
-    private var plannedCount: Int { model.history.reduce(0) { $0 + $1.totalCount } }
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -20,35 +15,24 @@ struct HistoryView: View {
                         .foregroundStyle(RhythmTheme.muted)
                 }
 
-                if plannedCount == 0 {
-                    RhythmCard {
-                        RhythmEmptyState(
-                            symbol: "chart.bar.xaxis",
-                            title: "Your story starts here.",
-                            message: "Scheduled habits and the steps you record will appear here. Nothing to catch up on."
-                        )
+                if let review = model.review {
+                    DailyCloseCard(review: review)
+                    WeeklyRhythmView(review: review)
+                    if review.plannedCount == 0 {
+                        Text("Your history starts with your first planned step. Off-days add nothing to the total.")
+                            .font(.subheadline).foregroundStyle(RhythmTheme.muted)
                     }
-                } else {
-                    RhythmCard {
-                        HStack(spacing: 24) {
-                            total(fullCount, label: "Full", symbol: "checkmark.circle.fill", colour: RhythmTheme.leaf)
-                            total(lightCount, label: "Light", symbol: "leaf.fill", colour: RhythmTheme.coral)
-                            total(plannedCount, label: "Planned", symbol: "calendar", colour: RhythmTheme.muted)
-                        }
-                        Text("\(skippedCount) skipped · not counted as completed")
-                            .font(.caption).foregroundStyle(RhythmTheme.muted).padding(.top, 12)
-                    }
-
+                    Text("Day by day").font(.title2.weight(.semibold))
+                        .accessibilityAddTraits(.isHeader)
                     VStack(spacing: 12) {
-                        ForEach(model.history.reversed(), id: \.dayKey) { summary in
-                            HistoryDayCard(summary: summary)
+                        ForEach(review.days.reversed()) { day in
+                            HistoryDayCard(day: day, asOf: review.asOf)
                         }
                     }
-                    Text("Uncompleted steps stay uncompleted. Light steps never count as full goals, and a missed day doesn't erase your progress.")
-                        .font(.footnote)
-                        .foregroundStyle(RhythmTheme.muted)
-                        .padding(.horizontal, 4)
+                    Text("Full and light steps count as completed. Skips stay separate. Schedule edits apply from their effective date; archive gaps add no pending work. One-offs count once, even if completed later. Saved results remain in history.")
+                        .font(.footnote).foregroundStyle(RhythmTheme.muted)
                 }
+
             }
             .padding(20)
             .padding(.bottom, 16)
@@ -59,21 +43,12 @@ struct HistoryView: View {
         .refreshable { await MainActor.run { model.refresh() } }
     }
 
-    private func total(_ count: Int, label: String, symbol: String, colour: Color) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: symbol).foregroundStyle(colour)
-            Text("\(count)")
-                .font(.system(.title, design: .rounded, weight: .bold).monospacedDigit())
-            Text(label).font(.caption).foregroundStyle(RhythmTheme.muted)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(count) \(label.lowercased()) steps")
-    }
 }
 
 private struct HistoryDayCard: View {
-    let summary: DailySummary
+    let day: RhythmReviewDay
+    let asOf: Date
+    private var summary: DailySummary { day.summary }
     @State private var expanded = false
 
     var body: some View {
@@ -96,7 +71,7 @@ private struct HistoryDayCard: View {
                         .accessibilityElement(children: .combine)
                     }
                     if summary.totalCount == 0 {
-                        Text("No habits scheduled.")
+                        Text("No steps planned. This off-day adds nothing to the total.")
                             .font(.subheadline)
                             .foregroundStyle(RhythmTheme.muted)
                     }
@@ -110,29 +85,16 @@ private struct HistoryDayCard: View {
                         .foregroundStyle(RhythmTheme.ink)
                     Text(summary.totalCount == 0
                          ? "No steps planned"
-                         : "\(summary.fullCount) full · \(summary.lightCount) light · \(summary.skippedCount) skipped · \(summary.remainingCount) pending")
+                         : "\(summary.fullCount) full · \(summary.lightCount) light · \(summary.skippedCount) skipped · \(summary.remainingCount) remaining")
                         .font(.caption)
                         .foregroundStyle(RhythmTheme.muted)
-                    if summary.totalCount > 0 {
-                        GeometryReader { geometry in
-                            ZStack(alignment: .leading) {
-                                Capsule().fill(RhythmTheme.ink.opacity(0.06))
-                                Capsule().fill(RhythmTheme.coral.opacity(0.5))
-                                    .frame(width: geometry.size.width * CGFloat(fraction(summary.completedCount)))
-                                Capsule().fill(RhythmTheme.leaf)
-                                    .frame(width: geometry.size.width * CGFloat(fraction(summary.fullCount)))
-                            }
-                        }
-                        .frame(height: 5)
-                        .accessibilityHidden(true)
+                    if day.plannedLaterCount > 0 {
+                        Text("Includes \(day.plannedLaterCount) remaining steps planned for later.")
+                            .font(.caption).foregroundStyle(RhythmTheme.muted)
                     }
                 }
             }
         }
-    }
-
-    private func fraction(_ count: Int) -> Double {
-        summary.totalCount > 0 ? min(Double(count) / Double(summary.totalCount), 1) : 0
     }
 
     private func symbol(for occurrence: DailyOccurrence) -> String {
@@ -155,10 +117,14 @@ private struct HistoryDayCard: View {
 
     private func detail(for occurrence: DailyOccurrence) -> String {
         switch occurrence.outcome {
-        case .full: "Full · \(occurrence.normalTarget)"
-        case .light: "Light · \(occurrence.lightTarget ?? "Small step")"
-        case .skipped: "Skipped · not completed"
-        case nil: "Not recorded · \(occurrence.normalTarget)"
+        case .full: return "Full · \(occurrence.normalTarget)"
+        case .light: return "Light · \(occurrence.lightTarget ?? "Small step")"
+        case .skipped: return "Skipped · not completed"
+        case nil:
+            if RhythmReviewDay.isPlannedLater(occurrence, at: asOf) {
+                return "Planned for later · \(RhythmDates.dueLabel(occurrence.due)) · \(occurrence.normalTarget)"
+            }
+            return "\(day.isToday ? "Remaining" : "Not recorded") · \(occurrence.normalTarget)"
         }
     }
 }
