@@ -35,6 +35,14 @@ The physical build also logged `Could not archive SSU artifacts` from `appintent
 
 Apple references: [register an App Group](https://developer.apple.com/help/account/identifiers/register-an-app-group), [configure App Groups](https://developer.apple.com/documentation/xcode/configuring-app-groups).
 
+## Habit creation and process relaunch
+
+The user created the default reading habit through the physical iPhone UI. Their 05:53 screenshot showed **Read**, **10 pages**, **Morning**, a **2 pages** light step, and **0/1** completed, without a storage-error banner.
+
+At approximately 05:56, `devicectl device process launch --terminate-existing` successfully restarted the application. The first capture overlapped the phone's lock screen, so that capture was not treated as a loaded-app result. After the user unlocked the phone, a fresh [device screenshot](issue-4/app-after-relaunch.png) showed the same habit, targets, daypart and pending count, with no storage error. **Visible creation and persistence across process relaunch pass.** Widget and Shortcuts access are separate checks.
+
+The habit's raw UUID has not been extracted. `devicectl device copy from` rejected the App Group root-level `daily-rhythm.json` because its container transfer service allows only `Library`, `Documents` and `tmp` (remote service error 11007). Consequently, the earlier limited directory listing cannot establish whether the store exists. This is a developer-tool access restriction, not evidence of a failed app read/write. No data was moved, replaced or seeded to bypass it. Exact record identity and completion timestamps still require separate evidence.
+
 ## Device matrix
 
 Each row requires an actual result. `Pending` means no pass is claimed. Tests involving corrupt files must use disposable test data, preserve an exact backup, and restore it after the check.
@@ -42,7 +50,7 @@ Each row requires an actual result. `Pending` means no pass is claimed. Tests in
 | Case | Procedure / required observation | Result |
 | --- | --- | --- |
 | Signing and shared container registration | Verify both signed entitlements and embedded profiles contain the exact group; install and inspect the device's registered container. | **Pass:** both signatures/profiles/configuration agree; installation and shared-container registration succeeded. Runtime access is checked by the create/relaunch row. |
-| App create and relaunch | Create a daily reading habit through the UI; record its UUID; terminate/relaunch and check the same habit. | Pending |
+| App create and relaunch | Create a daily reading habit through the UI; record its UUID; terminate/relaunch and check the same habit. | **Partial:** UI creation and visible persistence pass after process restart; Read / 10 pages / Morning / 2 pages light step remains pending (0/1). Raw UUID verification is pending because the device transfer service restricts access to the root-level store. |
 | Widget to app | Add small/medium widgets; complete a named step in the widget; foreground/relaunch the app and compare the persisted occurrence. | Pending |
 | App to widget | Undo/complete in the app; compare saved data immediately and widget rendering after WidgetKit reload. Record latency separately. | Pending |
 | Ordinary Shortcuts | Run Create Habit, Complete Daily Step and Undo Daily Step; confirm each mutation in the app and shared store. This does not establish schema-driven Siri AI support. | Pending |
