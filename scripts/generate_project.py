@@ -56,11 +56,13 @@ def generate():
     file_refs = {}
     resource = "DailyRhythm/Resources/PrivacyInfo.xcprivacy"
     assets = "DailyRhythm/Resources/Assets.xcassets"
-    for path in [str(p.relative_to(ROOT)) for p in sources] + [resource, assets]:
+    launch_screen = "DailyRhythm/Resources/LaunchScreen.storyboard"
+    for path in [str(p.relative_to(ROOT)) for p in sources] + [resource, assets, launch_screen]:
         file_refs[path] = obj(
             f"file:{path}", isa="PBXFileReference",
             lastKnownFileType=("sourcecode.swift" if path.endswith(".swift") else
-                               "folder.assetcatalog" if path.endswith(".xcassets") else "text.xml"),
+                               "folder.assetcatalog" if path.endswith(".xcassets") else
+                               "file.storyboard" if path.endswith(".storyboard") else "text.xml"),
             path=path, sourceTree="<group>",
         )
     app_product = obj("product:app", isa="PBXFileReference", explicitFileType="wrapper.application",
@@ -101,7 +103,7 @@ def generate():
         # LumeTech owns both bundle IDs and the shared App Group. Keep all targets
         # on this team when regenerating the project after source changes.
         "DEVELOPMENT_TEAM": "U54BLJMYG6",
-        "CURRENT_PROJECT_VERSION": "2",
+        "CURRENT_PROJECT_VERSION": "3",
         "IPHONEOS_DEPLOYMENT_TARGET": "18.0",
         "MARKETING_VERSION": "0.1.0",
         "SDKROOT": "iphoneos",
@@ -183,6 +185,7 @@ def generate():
         resource_builds = [resource_build]
         if kind == "app":
             resource_builds.append(obj("resource:app:assets", isa="PBXBuildFile", fileRef=file_refs[assets]))
+            resource_builds.append(obj("resource:app:launch-screen", isa="PBXBuildFile", fileRef=file_refs[launch_screen]))
         resources = obj(f"resources:{kind}", isa="PBXResourcesBuildPhase", buildActionMask=2147483647,
                         files=resource_builds, runOnlyForDeploymentPostprocessing=0)
         settings = {

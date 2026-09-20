@@ -209,6 +209,12 @@
 			"path" = "DailyRhythm/Resources/Assets.xcassets";
 			"sourceTree" = "<group>";
 		};
+		"94FA7A922490DB75F9839812" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "file.storyboard";
+			"path" = "DailyRhythm/Resources/LaunchScreen.storyboard";
+			"sourceTree" = "<group>";
+		};
 		"B6CDB6E5D160E013280D3C68" = {
 			"isa" = "PBXFileReference";
 			"explicitFileType" = "wrapper.application";
@@ -277,6 +283,7 @@
 				"04C8B4C0515FB7E7C907B3AF",
 				"730238439602493911E6A54F",
 				"B473D79CA7C5A5D296F49946",
+				"94FA7A922490DB75F9839812",
 				"00C45FD35CB0F9C5F764F070",
 			);
 			"sourceTree" = "<group>";
@@ -311,7 +318,7 @@
 				"CLANG_WARN__DUPLICATE_METHOD_MATCH" = "YES";
 				"CODE_SIGN_STYLE" = "Automatic";
 				"DEVELOPMENT_TEAM" = "U54BLJMYG6";
-				"CURRENT_PROJECT_VERSION" = "2";
+				"CURRENT_PROJECT_VERSION" = "3";
 				"IPHONEOS_DEPLOYMENT_TARGET" = "18.0";
 				"MARKETING_VERSION" = "0.1.0";
 				"SDKROOT" = "iphoneos";
@@ -363,7 +370,7 @@
 				"CLANG_WARN__DUPLICATE_METHOD_MATCH" = "YES";
 				"CODE_SIGN_STYLE" = "Automatic";
 				"DEVELOPMENT_TEAM" = "U54BLJMYG6";
-				"CURRENT_PROJECT_VERSION" = "2";
+				"CURRENT_PROJECT_VERSION" = "3";
 				"IPHONEOS_DEPLOYMENT_TARGET" = "18.0";
 				"MARKETING_VERSION" = "0.1.0";
 				"SDKROOT" = "iphoneos";
@@ -573,12 +580,17 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "B473D79CA7C5A5D296F49946";
 		};
+		"02F38D9A2DEB3A7F2FFC99A9" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "94FA7A922490DB75F9839812";
+		};
 		"C84B5C31679C986BFD935BC6" = {
 			"isa" = "PBXResourcesBuildPhase";
 			"buildActionMask" = 2147483647;
 			"files" = (
 				"33D765A91771EF8D69698F6E",
 				"C0CFCA0DCC416EA644446C08",
+				"02F38D9A2DEB3A7F2FFC99A9",
 			);
 			"runOnlyForDeploymentPostprocessing" = 0;
 		};

@@ -2,6 +2,8 @@
 
 **HOLD: prepared locally, not approved for upload or distribution.** This directory is a review packet for issue #21, not evidence of an active pilot. No build has been uploaded and no testers have been contacted by this task.
 
+**Newer source:** [logo/launch-screen work](../branding/README.md) advances the project to **0.1.0 (3)**. The build-2 archive and its evidence below remain historical. Before uploading build 3, create a fresh archive, record its source/hashes and update the candidate packet; do not present build-2 validation as acceptance of the new launch appearance.
+
 **App Store Connect record created on 20 September 2026:** [Daily Rhythm: Habit OS — 6814232930](https://appstoreconnect.apple.com/apps/6814232930/distribution/info), under LumeTech L.L.C. The owner selected this name after Apple rejected “Daily Rhythm” as unavailable. Saved App Information confirms iOS, English (U.S.), bundle ID and SKU `com.lumetechllc.DailyRhythm`. Reuse this record; do not create another app or change the native bundle/group identities.
 
 The new record shows **1.0 / Prepare for Submission** and TestFlight shows **No Builds**. The default storefront draft is separate from the local **0.1.0 (2)** beta candidate; no binary/version was changed or uploaded. Before any future App Review submission, review the untouched default sign-in-required and automatic-release selections against the actual no-login app and the owner's release decision. App creation alone does not complete metadata, privacy, export compliance or distribution signing.

@@ -6,6 +6,8 @@ Daily Rhythm is an English-language native iOS app for small routines that survi
 
 **Status: first implementation milestone.** The local habit loop, SwiftUI screens, interactive widgets and ordinary Siri Shortcuts are implemented in source. Device validation remains necessary before TestFlight. This is not a finished App Store release.
 
+**Latest visual update:** development build **0.1.0 (3)** adds a refined app icon and a native light/dark launch screen. [Artwork, design preview and build verification](docs/branding/README.md). The older build-2 archive below does not include these changes; build 3 still needs a new release archive and the pending device/UI checks.
+
 **Latest beta preparation:** version **0.1.0 (2)** has a development-signed Release archive, app icon, Help & Beta screen, 148 passing Release core tests, 32 native Release privacy checks and a passing isolated Simulator upgrade. [Candidate evidence](docs/verification/ISSUE-21-RELEASE-CANDIDATE.md) and the [14-day pilot packet](docs/release/README.md) keep physical/UI, distribution and public-information gates explicit. No TestFlight build has been uploaded.
 
 **Public-information preparation:** [support and privacy HTML previews](docs/release/web-preview/README.md) now accompany the pilot packet. They are local drafts, with confirmed support email and an explicit distinction between optional app diagnostics and automatic TestFlight collection. Public hosting, operator details and report-handling policy remain open.

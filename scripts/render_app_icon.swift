@@ -1,4 +1,5 @@
-// Original geometric artwork. No external images, fonts or runtime dependencies.
+// Legacy v1 geometric artwork, retained for reproducibility. The active icon is
+// AppIcon-v2.png (see docs/branding/README.md); this script does not replace it.
 // Run from the repository root: swift scripts/render_app_icon.swift
 import CoreGraphics
 import Foundation
@@ -31,7 +32,7 @@ context.move(to: CGPoint(x: 364, y: 510))
 context.addLine(to: CGPoint(x: 466, y: 410))
 context.addLine(to: CGPoint(x: 659, y: 625))
 context.strokePath()
-let output = URL(fileURLWithPath: "DailyRhythm/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png")
+let output = URL(fileURLWithPath: "docs/branding/app-icon-v1.png")
 try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
 let destination = CGImageDestinationCreateWithURL(output as CFURL, UTType.png.identifier as CFString, 1, nil)!
 CGImageDestinationAddImage(destination, context.makeImage()!, nil)
