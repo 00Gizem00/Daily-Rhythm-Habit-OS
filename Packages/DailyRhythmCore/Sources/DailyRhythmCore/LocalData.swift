@@ -26,13 +26,64 @@ public struct RoutineDataLifecycle: Codable, Equatable, Sendable {
 }
 
 public enum LocalDataError: Error, LocalizedError, Equatable {
-    case staleAction, erasurePending, invalidLifecycle
+    case staleAction, erasurePending, invalidLifecycle, invalidBackup, restoreRequiresEmptyStore
     public var errorDescription: String? {
         switch self {
         case .staleAction: "Local data changed after this action was prepared. Open Daily Rhythm and start again."
         case .erasurePending: "Local data erase is unfinished. Open Habits → Data & Privacy to finish it."
         case .invalidLifecycle: "The local data recovery marker could not be read. Existing files have been kept."
+        case .invalidBackup: "Choose a supported Daily Rhythm JSON export. The file could not be validated; nothing was changed."
+        case .restoreRequiresEmptyStore: "Restore requires an empty Daily Rhythm store. Existing plans and history have been kept."
         }
+    }
+}
+
+/// A validated recovery snapshot with fresh identities. Restoring history must not
+/// revive widget actions, configured Controls or Undo tokens from before erasure.
+public struct RoutineBackup {
+    let document: StoreDocument
+    public var planCount: Int { document.habits.count }
+    public var recordCount: Int { document.records.count }
+
+    public init(jsonExport: Data) throws {
+        guard jsonExport.count <= 20_000_000 else { throw LocalDataError.invalidBackup }
+        struct Envelope: Decodable {
+            let format: String
+            let exportVersion: Int
+            let dateEncoding: String
+            let data: StoreDocument
+        }
+        do {
+            let envelope = try JSONDecoder().decode(Envelope.self, from: jsonExport)
+            guard envelope.format == "daily-rhythm-export", envelope.exportVersion == 1,
+                  envelope.dateEncoding == RoutineJSONExport.dataDateEncoding else {
+                throw LocalDataError.invalidBackup
+            }
+            try envelope.data.validate()
+            let old = envelope.data
+            let ids = Dictionary(uniqueKeysWithValues: old.habits.map { ($0.id, UUID()) })
+            var restored = StoreDocument()
+            restored.habits = old.habits.map {
+                StoredHabit(id: ids[$0.id]!, createdAt: $0.createdAt, firstDayKey: $0.firstDayKey,
+                            mutationDayKey: $0.mutationDayKey, revisions: $0.revisions, archiveIntervals: $0.archiveIntervals)
+            }
+            restored.records = old.records.map {
+                let id = ids[$0.habitID]!
+                return DailyOccurrence(id: "\(id.uuidString)|\($0.dayKey)", habitID: id, dayKey: $0.dayKey,
+                    title: $0.title, normalTarget: $0.normalTarget, lightTarget: $0.lightTarget,
+                    dayPart: $0.dayPart, durationMinutes: $0.durationMinutes, due: $0.due,
+                    outcome: $0.outcome, completedAt: $0.completedAt, completionSource: $0.completionSource,
+                    skippedAt: $0.skippedAt, deferredUntil: $0.deferredUntil, mutationID: UUID())
+            }
+            restored.dayModes = old.dayModes?.map { DayMode(dayKey: $0.dayKey, isLightDay: $0.isLightDay, revision: UUID()) }
+            try restored.validate()
+            document = restored
+        } catch { throw LocalDataError.invalidBackup }
+    }
+
+    /// Expected post-restore snapshot, also used for exact read-back verification.
+    public func jsonExport(at date: Date = Date()) throws -> Data {
+        try RoutineDataExport.encode(document, format: .json, at: date)
     }
 }
 
@@ -53,10 +104,11 @@ enum LocalDataFiles {
 public enum RoutineExportFormat: String, CaseIterable, Sendable { case json, csv }
 
 struct RoutineJSONExport: Encodable {
+    static let dataDateEncoding = "Data dates are seconds since 2001-01-01T00:00:00Z (Foundation reference date), preserving stored precision."
     let format = "daily-rhythm-export"
     let exportVersion = 1
     let exportedAt: String
-    let dateEncoding = "Data dates are seconds since 2001-01-01T00:00:00Z (Foundation reference date), preserving stored precision."
+    let dateEncoding = Self.dataDateEncoding
     let data: StoreDocument
 }
 

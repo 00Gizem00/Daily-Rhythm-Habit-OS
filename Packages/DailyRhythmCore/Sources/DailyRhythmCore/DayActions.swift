@@ -14,7 +14,7 @@ public struct OccurrenceUndo: Sendable {
     let resultingRevision: String
 }
 
-struct DayMode: Codable {
+struct DayMode: Codable, Equatable {
     let dayKey: String
     let isLightDay: Bool
     let revision: UUID

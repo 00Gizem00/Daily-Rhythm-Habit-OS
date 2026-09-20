@@ -93,6 +93,23 @@ public final class RoutineStore: @unchecked Sendable {
         }
     }
 
+    /// Recovery is Free and only replaces an empty validated store. Current-generation
+    /// checking, the empty check and atomic persistence happen in the same transaction.
+    public func restoreBackup(_ backup: RoutineBackup) throws {
+        try transaction { state in
+            guard state.habits.isEmpty, state.records.isEmpty, (state.dayModes ?? []).isEmpty else {
+                throw LocalDataError.restoreRequiresEmptyStore
+            }
+            state = backup.document
+            return ((), true)
+        }
+    }
+
+    /// Compare every saved field, treating weekday sets by membership, not JSON order.
+    public func matchesRestoredBackup(_ backup: RoutineBackup) throws -> Bool {
+        try transaction(migrate: false) { state in (state == backup.document, false) }
+    }
+
     /// Stage the export under the data lock so erasure cannot miss a late file write.
     public func writeExport(format: RoutineExportFormat, to destination: URL, at now: Date = Date()) throws {
         try checkDate(now)

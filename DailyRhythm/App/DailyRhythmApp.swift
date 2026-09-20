@@ -103,6 +103,9 @@ private struct RhythmRootView: View {
         }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
+            #if DEBUG
+            RoutineBackupRecovery.runIfRequested(model: model, setup: setup)
+            #endif
             #if DEBUG && DAILY_RHYTHM_SCHEMA_SPIKE && compiler(>=6.4)
             if #available(iOS 27.0, *) { await ReminderSchemaSmoke.runIfRequested() }
             #endif

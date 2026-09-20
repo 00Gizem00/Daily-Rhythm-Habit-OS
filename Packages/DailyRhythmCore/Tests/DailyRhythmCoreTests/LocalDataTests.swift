@@ -3,6 +3,79 @@ import XCTest
 
 @MainActor
 final class LocalDataTests: XCTestCase {
+    func testRestorePreservesHistoryWithNewIdentitiesAndRejectsOverwrite() throws {
+        let f = try DataFixture(); defer { f.remove() }
+        let store = f.store
+        var definition = f.definition
+        definition.recurrence = .weekly(weekdays: Set(1...7))
+        let habits = try store.addHabits(Array(repeating: definition, count: 3), now: f.now)
+        let oldStep = try store.occurrence(id: "\(habits[0].id)|2026-09-20")
+        _ = try store.perform(.complete(.full), on: oldStep, now: f.now.addingTimeInterval(0.123456))
+        try store.archive(habitID: habits[0].id, now: f.now)
+        let oldSnapshot = try store.exportData(format: .json, at: f.now)
+        let originalBytes = try Data(contentsOf: f.url)
+        let backup = try RoutineBackup(jsonExport: oldSnapshot)
+        XCTAssertEqual(backup.planCount, 3)
+        XCTAssertEqual(backup.recordCount, 1)
+        XCTAssertThrowsError(try store.restoreBackup(backup))
+        XCTAssertEqual(try Data(contentsOf: f.url), originalBytes)
+        let lifecycle = try store.beginErasure(expectedGeneration: RoutineDataLifecycle.initialGeneration)
+        try store.finishErasure(generation: lifecycle.generation)
+        let restored = RoutineStore(fileURL: f.url, calendar: f.calendar, entitlementProvider: NoExportEntitlementLookup())
+        try restored.restoreBackup(backup)
+        XCTAssertTrue(try restored.matchesRestoredBackup(backup))
+        let newHabits = try restored.habits(includeArchived: true, asOf: f.now)
+        XCTAssertTrue(Set(newHabits.map(\.id)).isDisjoint(with: habits.map(\.id)))
+        let completedHabit = try XCTUnwrap(newHabits.first(where: { $0.archivedAt != nil }))
+        let completed = try restored.managedOccurrences(habitID: completedHabit.id).first
+        XCTAssertEqual(completed?.outcome, .full)
+        XCTAssertEqual(completed?.completedAt, f.now.addingTimeInterval(0.123456))
+        XCTAssertThrowsError(try restored.perform(.complete(.full), on: oldStep, now: f.now))
+        XCTAssertThrowsError(try restored.restoreBackup(backup))
+    }
+
+    func testRestoreRejectsMalformedFutureAndStaleDataAndRetainsAtomicFailure() throws {
+        let f = try DataFixture(); defer { f.remove() }
+        _ = try f.store.addHabit(f.definition, now: f.now)
+        let source = try f.store.exportData(format: .json)
+        XCTAssertThrowsError(try RoutineBackup(jsonExport: Data("{}".utf8)))
+        var future = try JSONSerialization.jsonObject(with: source) as! [String: Any]
+        future["exportVersion"] = 99
+        XCTAssertThrowsError(try RoutineBackup(jsonExport: JSONSerialization.data(withJSONObject: future)))
+        let backup = try RoutineBackup(jsonExport: source), old = f.store
+        let lifecycle = try old.beginErasure(expectedGeneration: RoutineDataLifecycle.initialGeneration)
+        XCTAssertThrowsError(try f.store.restoreBackup(backup))
+        try old.finishErasure(generation: lifecycle.generation)
+        XCTAssertThrowsError(try old.restoreBackup(backup))
+        let failing = RoutineStore(fileURL: f.url, calendar: f.calendar, saveSnapshot: { _, _ in throw CocoaError(.fileWriteUnknown) })
+        XCTAssertThrowsError(try failing.restoreBackup(backup))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: f.url.path))
+        XCTAssertTrue(try f.store.habits().isEmpty)
+    }
+
+    func testConcurrentRestoreAndCreationNeverOverwriteEachOther() throws {
+        let f = try DataFixture(); defer { f.remove() }
+        _ = try f.store.addHabit(f.definition, now: f.now)
+        let bytes = try f.store.exportData(format: .json)
+        let lifecycle = try f.store.beginErasure(expectedGeneration: RoutineDataLifecycle.initialGeneration)
+        try f.store.finishErasure(generation: lifecycle.generation)
+        var createdDefinition = f.definition
+        createdDefinition.title = "Created during restore"
+        let definition = createdDefinition, now = f.now, url = f.url, calendar = f.calendar
+        let failures = DataTestFailures()
+        DispatchQueue.concurrentPerform(iterations: 2) { index in
+            do {
+                let store = RoutineStore(fileURL: url, calendar: calendar)
+                if index == 0 { try store.restoreBackup(RoutineBackup(jsonExport: bytes)) }
+                else { _ = try store.addHabit(definition, now: now) }
+            } catch LocalDataError.restoreRequiresEmptyStore {} catch { failures.append(error) }
+        }
+        XCTAssertTrue(failures.errors.isEmpty)
+        let saved = try f.store.habits()
+        XCTAssertTrue((1...2).contains(saved.count))
+        XCTAssertEqual(saved.filter { $0.title == "Created during restore" }.count, 1)
+    }
+
     func testFailedEraseBarrierPreservesOriginalData() throws {
         let f = try DataFixture(); defer { f.remove() }
         _ = try f.store.addHabit(f.definition, now: f.now)

@@ -1,6 +1,6 @@
 import Foundation
 
-struct StoredHabit: Codable {
+struct StoredHabit: Codable, Equatable {
     let id: UUID
     let createdAt: Date
     let firstDayKey: String
@@ -30,7 +30,7 @@ struct StoredHabit: Codable {
     }
 }
 
-struct StoreDocument: Codable {
+struct StoreDocument: Codable, Equatable {
     var version = 3
     var habits: [StoredHabit] = []
     var records: [DailyOccurrence] = []
