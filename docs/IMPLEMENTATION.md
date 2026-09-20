@@ -56,6 +56,110 @@ An unsigned Simulator build does not verify signing, App Group provisioning, Sir
 - Test after locking/unlocking, across midnight, after a timezone change and with a stale widget.
 - Test VoiceOver, large Dynamic Type and Reduce Motion.
 
-The current developer environment is Linux without Xcode or Swift. Local project-generation consistency, plist/XML parsing and whitespace checks passed. Fourteen core tests are written but have not run.
+The initial implementation was produced on Linux without Xcode or Swift. Its project-generation consistency, plist/XML parsing and whitespace checks passed, but its fourteen written core tests and native build were not executed there. The Mac verification below supersedes that native-validation status.
 
-The [first GitHub Actions run](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/actions/runs/35479213534) stopped before allocating a runner or executing any step. GitHub reports: "The job was not started because your account is locked due to a billing issue." Consequently, there is no Swift test result or Xcode build result yet. Resolve the account issue and rerun the workflow, or use the Mac commands in the README. Native compilation and the device checks above remain release gates.
+### Issue #3 native validation — 20 September 2026
+
+Tracking: [#3](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/issues/3), the first item in [the delivery roadmap](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/issues/2).
+
+**Tested source commit:** `3202d911b205afc0f7257df56207340368c0a071` (merged PR #1). `git fetch origin` confirmed that `HEAD` and the latest `origin/main` both pointed to this commit before verification. No application, package, project-generator or generated-project source changes were needed for the tests or compilation. This validation branch only updates evidence/documentation.
+
+| Environment | Recorded value |
+| --- | --- |
+| Host | Apple Silicon, macOS 27.0 (`26A428`) |
+| Xcode | 27.0, build `27A266a` |
+| Swift | Apple Swift 6.4 (`swiftlang-6.4.0.34.1`, `clang-2100.3.34.1`); Swift 6 language mode |
+| Simulator build SDK | iOS Simulator 27.0 (`24A430`) |
+| Deployment target | iOS 18.0 |
+| Build configuration | Debug, unsigned, generic iOS Simulator; arm64 and x86_64 |
+| Local run time | 20 September 2026, approximately 05:27 Europe/Istanbul (02:27 UTC) |
+
+Commands run from the repository root:
+
+```sh
+git fetch origin
+git rev-parse HEAD origin/main
+sw_vers
+xcodebuild -version
+swift --version
+xcodebuild -showsdks
+swift test --package-path Packages/DailyRhythmCore
+xcodebuild -project DailyRhythm.xcodeproj -scheme DailyRhythm \
+  -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath /tmp/daily-rhythm-issue-3/DerivedData \
+  CODE_SIGNING_ALLOWED=NO build
+python3 scripts/generate_project.py --check
+git diff --check
+```
+
+`-derivedDataPath` only controls the location of build artifacts; the build otherwise uses the README command. A generic build destination does not select, boot or modify a Simulator device.
+
+| Check | Actual result |
+| --- | --- |
+| Existing core tests | **Passed:** 14 XCTest cases executed, zero failures, 0.089 seconds reported for the suite; command exited 0. The trailing Swift Testing runner reported zero tests because these tests use XCTest. |
+| App and widget compilation | **Passed:** `DailyRhythm` and `DailyRhythmWidgets` compiled and linked for both Simulator architectures, the widget was embedded and validated, and `xcodebuild` ended with `BUILD SUCCEEDED`, exit 0. |
+| Deterministic project | **Passed:** `Xcode project is up to date.`, exit 0; no regeneration necessary. |
+| Whitespace check | **Passed:** `git diff --check`, exit 0. |
+| Simulator launch and App Group access | **Passed with ad hoc signing:** app installed and launched on the existing iPhone 17 Pro / iOS 26.5 Simulator. The app shows the empty-state creation screen without a storage error, and `simctl get_app_container ... groups` lists the configured App Group. |
+| Create a habit, terminate and relaunch | **Passed, user-assisted UI creation:** the user created the reading habit through the app. After `simctl terminate` and `simctl launch`, the same habit appeared on Today with the same UUID, targets and unchanged saved bytes. See evidence below. |
+
+The core test run exercised recurrence, rollover/DST, timezone travel, duplicate completion, undo, full/light outcomes, archive history, fresh-store reload, invalid/corrupt/unsupported data preservation and concurrent independent stores. No compiler or test failure required a source fix or a new regression test.
+
+The successful build did emit this diagnostic from `AppIntentsSSUTraining`:
+
+```text
+appintentsnltrainingprocessor: error: Could not archive SSU artifacts. Check build log.
+** BUILD SUCCEEDED **
+```
+
+`ExtractAppIntentsMetadata` wrote `Metadata.appintents`; SSU YAML generation and copying also completed before the archive diagnostic. The build log provides no more specific failure cause. Record this as an unresolved tooling diagnostic, not proof of working Siri recognition or a clean App Shortcuts training result. Recheck discovery and invocation during [#4](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/issues/4). No build setting was changed to suppress the diagnostic.
+
+Local raw logs from this run are `/tmp/daily-rhythm-issue-3/swift-test.log` and `/tmp/daily-rhythm-issue-3/xcodebuild.log`. These are temporary local artifacts; the commands, environment, commit and outcomes above are the durable evidence.
+
+#### Simulator launch follow-up
+
+The existing, already-booted test device was **iPhone 17 Pro**, iOS **26.5 (`23F77`)**, UUID `A846DE14-5BB1-4F7E-9EEC-D4310CEB07F6`. No Simulator was created, deleted or moved to a different runtime.
+
+Installing the unsigned compilation artifact produced the expected storage-error UI: `Daily Rhythm cannot access its shared storage.` The app had no registered App Group container. Rebuilding with local ad hoc signing allowed Xcode to package the configured simulated App Group entitlements, and the same device then opened the normal first-habit screen. No application fallback store or entitlement/source changes were introduced.
+
+```sh
+xcodebuild -project DailyRhythm.xcodeproj -scheme DailyRhythm \
+  -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath /tmp/daily-rhythm-issue-3/DerivedData \
+  CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- build
+xcrun simctl terminate A846DE14-5BB1-4F7E-9EEC-D4310CEB07F6 \
+  com.lumetechllc.DailyRhythm
+xcrun simctl install A846DE14-5BB1-4F7E-9EEC-D4310CEB07F6 \
+  /tmp/daily-rhythm-issue-3/DerivedData/Build/Products/Debug-iphonesimulator/DailyRhythm.app
+xcrun simctl launch A846DE14-5BB1-4F7E-9EEC-D4310CEB07F6 \
+  com.lumetechllc.DailyRhythm
+xcrun simctl get_app_container A846DE14-5BB1-4F7E-9EEC-D4310CEB07F6 \
+  com.lumetechllc.DailyRhythm groups
+```
+
+The ad hoc build exited 0 with `BUILD SUCCEEDED`; launch returned a live process ID and the container query returned `group.com.lumetechllc.DailyRhythm`. The build log is `/tmp/daily-rhythm-issue-3/simulator-signed-build.log`. The README now separates unsigned compilation from an entitlement-enabled launch check. This is Simulator evidence only; physical-device App Group provisioning and widget/intent writes are not established by it.
+
+#### Habit persistence smoke check
+
+At approximately 05:34 Europe/Istanbul, the user performed **Try a reading habit → Create** on the existing Simulator. This was user-assisted because the Device Hub UI automation connection repeatedly returned `timeoutReached` (error -10005). No store data was seeded or edited outside the app.
+
+Before termination, the Today screen showed **Read**, full goal **10 pages**, light goal **2 pages**, Morning, and **0/1** steps. A read-only inspection of the App Group JSON confirmed exactly one habit, UUID `B03E96F9-A02C-4DA1-B9C2-BFB2076215D6`, scheduled on all seven weekdays.
+
+```sh
+xcrun simctl terminate A846DE14-5BB1-4F7E-9EEC-D4310CEB07F6 \
+  com.lumetechllc.DailyRhythm
+xcrun simctl launch A846DE14-5BB1-4F7E-9EEC-D4310CEB07F6 \
+  com.lumetechllc.DailyRhythm
+```
+
+Both commands exited 0; the process ID changed from `10424` to `11342`. The relaunched app displayed the same reading habit, targets and **0/1** count without a storage error. A second read-only inspection confirmed the same UUID, exactly one habit and an identical SHA-256 for the saved JSON before and after relaunch:
+
+```text
+f6f510704994b9078e80d3350e30346564b74d0fdc00f5c847dfc05bdb0d725d
+```
+
+Screenshots: [before termination](verification/issue-3/before-relaunch.png) and [after relaunch](verification/issue-3/after-relaunch.png). These are captures of the running Simulator, not mockups. The test habit remains in the app for further checks.
+
+**CI status checked on 20 September 2026:** the [first GitHub Actions run](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/actions/runs/35479213534), for commit `b54ccc6cf26b5752390d56c9924671b57862646f`, remains `completed` / `failure`. The GitHub API returned no executed job steps, and the check annotation still says: "The job was not started because your account is locked due to a billing issue." This historical run is not a green CI result. Local Mac execution is the verification path allowed by #3; no billing changes were made.
+
+**Closure:** all four acceptance criteria for #3 are demonstrated by the local tests, builds, user-assisted launch/persistence check and this evidence. The PR can use `Closes #3`. Physical-device signing, App Group provisioning, cross-surface writes, locked-device behaviour, Siri invocation and widget refresh are still unverified and belong to #4 and the later release gates above.
