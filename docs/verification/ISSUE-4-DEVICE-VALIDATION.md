@@ -5,12 +5,13 @@ Tracking: [issue #4](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/issues/4
 ## Environment and build
 
 - Date: 20 September 2026, Europe/Istanbul.
-- Source baseline: `7a36828c3e585ee8f268e627c6377830cc9bfe53`, current `main` after #31 merged and #3 closed.
+- Initial source baseline: `7a36828c3e585ee8f268e627c6377830cc9bfe53`, `main` after #31 merged and #3 closed.
 - Physical device: iPhone 16, iOS 27.0 (`24A437`), Developer Mode enabled, paired over the local network.
 - Toolchain: Xcode 27.0 (`27A266a`), Apple Swift 6.4, iPhoneOS 27.0 SDK.
 - App: `com.lumetechllc.DailyRhythm`; widget: `com.lumetechllc.DailyRhythm.Widgets`.
 - Required shared group: `group.com.lumetechllc.DailyRhythm`.
 - Signed build: **Debug 0.1.0 (1)**, Apple Development signing, built successfully and installed on the physical iPhone at approximately 05:48–05:49.
+- Target-label fix: source `5c368716919eb20a8797c2dcd91337f655fe49bc`, signed **Debug 0.1.0 (1)** rebuilt and installed at approximately 06:12. Both target signatures, signed/profile App Groups and expanded Info.plist settings were reverified. Project-generation consistency and whitespace checks pass.
 
 Device serial numbers, physical-device identifiers, raw provisioning profiles and account credentials are deliberately excluded from this repository record. Use the selected device UUID locally for the commands below.
 
@@ -67,7 +68,9 @@ At approximately 06:10, the user ran **Create Habit** with the name **Read** and
 
 After the user reopened the original Read / 10 pages step, both Morning habits were pending. Opening **Complete Step** displayed two identical choices: **Read** with **Morning · 2026-09-20**, omitting the different targets ([picker before fix](issue-4/shortcut-duplicate-picker-before.png)). This is a reproduced selection defect: the user cannot identify the intended habit from those labels. No choice was submitted during this check, so a wrong-record write is not claimed.
 
-`RhythmOccurrenceEntity` now includes the normal target at the start of its display subtitle, followed by the existing daypart, date and recorded status. Occurrence IDs and entity lookup are unchanged. The corrected signed build and physical selection test are pending below.
+`RhythmOccurrenceEntity` now includes the normal target at the start of its display subtitle, followed by the existing daypart, date and recorded status. Occurrence IDs and entity lookup are unchanged. The corrected signed build succeeded and was installed without removing the app; a fresh app launch retained both habits at **0/2**. After restarting Shortcuts and reopening **Complete Step**, the user and a fresh [picker screenshot](issue-4/shortcut-duplicate-picker-after.png) confirmed distinct **10 pages · Morning · 2026-09-20** and **One step · Morning · 2026-09-20** subtitles.
+
+The user selected **Read — One step**. A forced app restart at approximately 06:13 showed **1/2**, with **Read / 10 pages** still pending as Next Up and the other Read row completed ([result after selecting One step](issue-4/app-after-duplicate-selection.png)). **The same-name, same-daypart, different-target scenario passes on the corrected build.** The screenshot establishes the visible selected result; raw record IDs were not extracted. No new core regression test was added for this display-only change; the real Shortcuts picker and selected-habit result were tested on device.
 
 ## Device matrix
 
@@ -81,7 +84,7 @@ Each row requires an actual result. `Pending` means no pass is claimed. Tests in
 | App to widget | Undo/complete in the app; compare saved data immediately and widget rendering after WidgetKit reload. Record latency separately. | **Partial:** after app Reopen, the user observed the small widget immediately return to Read / 10 pages and 0/1. Measured latency, raw data and app completion-to-widget checks remain pending. |
 | Ordinary Shortcuts | Run Create Habit, Complete Daily Step and Undo Daily Step; confirm each mutation in the app and shared store. This does not establish schema-driven Siri AI support. | **Partial:** all three discover and execute successfully. Undo returns the foreground app to 0/1; two Complete runs yield one full completion after restart; Create adds a pending Read / One step while retaining Read / 10 pages as completed. Raw record identity and timestamp are still unverified. |
 | Duplicate completion | Repeat completion across two surfaces, including competing full/light requests; retain the first timestamp and outcome until explicit Undo. | **Partial:** two full completions via Shortcuts leave one visible full completion after app restart. Competing outcomes, cross-surface overlap and the original timestamp remain unverified. |
-| Duplicate names | Create same-name habits with different targets, including the same daypart; select one exact occurrence and confirm the other remains pending. | **Fail on baseline:** two pending Morning Read habits with different targets produce indistinguishable picker rows. Target labels added; signed-build and physical selection verification pending. |
+| Duplicate names | Create same-name habits with different targets, including the same daypart; select one exact occurrence and confirm the other remains pending. | **Pass for the tested visible scenario after fix:** the picker distinguishes targets; selecting Read / One step completes that item and leaves Read / 10 pages pending after app restart. Baseline indistinguishable rows are preserved as failure evidence. |
 | Stale widget / archive | Keep an old widget entry, archive its habit in the app, then invoke the old button; reject unavailable work without changing another item. | Pending |
 | Midnight | Invoke an occurrence captured before the date boundary after the boundary; preserve its exact identity and never complete tomorrow's item. | Pending |
 | Locked after first unlock | Lock the iPhone after a successful unlock; exercise a widget/Shortcut and record saved data or an honest system/app rejection. | Pending |
