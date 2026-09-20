@@ -6,7 +6,7 @@ Daily Rhythm is an English-language native iOS app for small routines that survi
 
 **Status: first implementation milestone.** The local habit loop, SwiftUI screens, interactive widgets and ordinary Siri Shortcuts are implemented in source. Device validation remains necessary before TestFlight. This is not a finished App Store release.
 
-**Validation:** all 14 core tests and the unsigned iOS Simulator build of the app and widget passed locally on 20 September 2026 with Xcode 27.0 / Swift 6.4. App relaunch persistence still needs a launch smoke check. The build also logged a nonfatal App Shortcuts SSU archive error; Siri behaviour remains unverified. See the [native validation evidence](docs/IMPLEMENTATION.md#issue-3-native-validation--20-september-2026) for commands, the tested commit and outstanding checks. The original [GitHub Actions run](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/actions/runs/35479213534) remains blocked by the account billing issue.
+**Validation:** all 14 core tests and the unsigned iOS Simulator build of the app and widget passed locally on 20 September 2026 with Xcode 27.0 / Swift 6.4. A habit created through the UI also survived process termination and relaunch on the existing iPhone 17 Pro / iOS 26.5 Simulator using an ad hoc signed build. The unsigned build logged a nonfatal App Shortcuts SSU archive error; Siri behaviour remains unverified. See the [native validation evidence](docs/IMPLEMENTATION.md#issue-3-native-validation--20-september-2026) for commands, the tested commit and outstanding device checks. The original [GitHub Actions run](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/actions/runs/35479213534) remains blocked by the account billing issue.
 
 ## In this milestone
 
@@ -36,13 +36,31 @@ Run the core tests on a Mac:
 swift test --package-path Packages/DailyRhythmCore
 ```
 
-Build the app and widget without device signing:
+Build the app and widget without device signing (compilation check only):
 
 ```sh
 xcodebuild -project DailyRhythm.xcodeproj -scheme DailyRhythm \
   -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
   CODE_SIGNING_ALLOWED=NO build
 ```
+
+For a launch/persistence check, keep Simulator signing enabled so Xcode embeds the App Group entitlements. Installing the unsigned build above can launch the app but leave shared storage unavailable. Build with a local ad hoc identity, then install on your existing test Simulator:
+
+```sh
+xcodebuild -project DailyRhythm.xcodeproj -scheme DailyRhythm \
+  -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath DerivedData \
+  CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- build
+
+# Set this to the UUID of your existing, selected test Simulator.
+# Find it with: xcrun simctl list devices available
+RHYTHM_SIMULATOR_UDID='<your existing test Simulator UUID>'
+xcrun simctl install "$RHYTHM_SIMULATOR_UDID" \
+  DerivedData/Build/Products/Debug-iphonesimulator/DailyRhythm.app
+xcrun simctl launch "$RHYTHM_SIMULATOR_UDID" com.lumetechllc.DailyRhythm
+```
+
+In the app, create a habit, terminate the app with `xcrun simctl terminate "$RHYTHM_SIMULATOR_UDID" com.lumetechllc.DailyRhythm`, then launch it again and verify the same habit remains. Do not substitute a direct write to the store for this UI check. Simulator signing does not validate physical-device provisioning.
 
 The Xcode project is checked in. After adding or removing Swift source files, run `python3 scripts/generate_project.py`. CI checks the generated project, runs the core tests and builds both targets. Personal signing edits may need to be reapplied after regeneration.
 
