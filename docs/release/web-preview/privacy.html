@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta name="description" content="Review draft explaining local data, optional diagnostics and voluntary sharing in Daily Rhythm beta.">
+  <title>Privacy — Daily Rhythm · review draft</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <div class="draft"><div class="wrap"><strong>Review draft</strong> This is not a published privacy policy. Operator and report-handling details await confirmation.</div></div>
+  <header class="wrap">
+    <a class="brand" href="index.html"><img src="favicon.svg" alt="" width="38" height="38">Daily Rhythm</a>
+    <nav aria-label="Main"><a href="index.html">Support</a><a href="privacy.html" aria-current="page">Privacy</a></nav>
+  </header>
+  <main class="wrap" id="main" tabindex="-1">
+    <p class="eyebrow">Your data in Daily Rhythm</p>
+    <h1>Your routines.<br>Your local record.</h1>
+    <p class="intro">This draft describes beta 0.1.0 (2). It distinguishes information kept on your device from information you choose to send outside the app.</p>
+    <div class="review" role="note" aria-labelledby="review-heading">
+      <h2 id="review-heading">Before this policy can be published</h2>
+      <p>The legal operator, public website address and the handling of received support/pilot reports still need confirmation. In particular: who can access reports, where they are stored and when they are deleted. No external retention period has been adopted by this draft.</p>
+      <p>Prepared 20 September 2026. This is a review date, not an effective policy date.</p>
+    </div>
+    <div class="layout">
+      <div class="content">
+        <section id="local">
+          <h2>1. Information on your device</h2>
+          <p>Daily Rhythm stores your routines, goals, history and preferences locally. Its app, widgets and App Shortcuts use shared local storage. Manual tracking works without an account, an AI service or a network connection.</p>
+          <p>This beta has no advertising SDK, remote analytics service or cloud sync. Device backups are managed separately through your iOS settings.</p>
+        </section>
+        <section id="notifications">
+          <h2>2. Optional notifications</h2>
+          <p>Local reminders are optional. The app requests notification permission when you enable a reminder option. iOS controls permission and delivery. You can decline permission and continue tracking manually.</p>
+        </section>
+        <section id="diagnostics">
+          <h2>3. Optional local diagnostics</h2>
+          <p>Diagnostics are off by default. If enabled, they record first saved completion counts, relative observation days, known input surfaces, available setup duration and categorized action failures. They do not record habit names, targets, prompts or raw error messages.</p>
+          <p>Local occurrence keys prevent double-counting. Diagnostic exports omit those keys, exact timestamps and timezone identifiers. The app cannot distinguish every Siri, Shortcuts or control invocation, so reports do not claim that precision.</p>
+          <p>Observation lasts 30 civil days. Expired observations are removed on the next app or diagnostics access. Turning observation off deletes local observation records. Saved exports outside the app remain under your control.</p>
+          <p>No diagnostic report is uploaded automatically. You may export and inspect a report before deciding to share it. Reports voluntarily sent to an organizer may be linked to your email address or participant code; they are not necessarily anonymous.</p>
+        </section>
+        <section id="sharing">
+          <h2>4. Files you choose to share</h2>
+          <p>You can export routine JSON, history CSV or diagnostics JSON and select a destination through iOS sharing. A routine backup contains personal routine text and history. A diagnostic report contains aggregate usage information.</p>
+          <p>Review the file and destination before sharing. Once a file leaves Daily Rhythm, the recipient or service handles that copy under its own practices. Erasing data in Daily Rhythm does not remove copies you saved or sent elsewhere.</p>
+        </section>
+        <section id="erase">
+          <h2>5. Erasing local data</h2>
+          <p><strong>Erase Local Data</strong> permanently removes routines, history, preferences, setup state, local diagnostics and other app-owned data, and cancels the app’s notifications. Export JSON first if you want a recovery copy.</p>
+          <p>A previously saved JSON backup can restore plans and history into an empty app. Small non-personal coordination and recovery files remain to reject outdated actions and recover interrupted erasure. iOS permissions, device backups and copies outside the app are managed separately.</p>
+          <p>For missing records or a failed operation, <a href="index.html#restore">contact support before erasing or reinstalling</a>.</p>
+        </section>
+        <section id="feedback">
+          <h2>6. Support and TestFlight feedback</h2>
+          <p>If you email support, the recipient receives your address, message and any attachments you include. Send only what is needed to explain the problem. An ordinary bug report does not require a routine backup.</p>
+          <p>TestFlight automatically collects crash logs and usage information and shares them with the app provider; Apple does not offer an opt-out for that collection while testing through TestFlight. This is separate from Daily Rhythm’s optional local diagnostics. Feedback you choose to send through TestFlight is also shared with the app provider and may be associated with your name and email. See <a href="https://www.apple.com/legal/privacy/data/en/test-flight/">Apple’s TestFlight privacy information</a>.</p>
+          <p class="notice">Draft limitation: the operator’s destinations, access and retention for received reports are not yet confirmed. This section must be completed before the policy is published or pilot reports are requested.</p>
+        </section>
+        <section id="contact">
+          <h2>7. Privacy questions</h2>
+          <p>Contact <a href="mailto:Contact@lumetechllc.com?subject=Daily%20Rhythm%20privacy">Contact@lumetechllc.com</a> for privacy questions, including requests about information you previously sent to support. Do not include a routine backup unless it is needed and you choose to share it.</p>
+        </section>
+      </div>
+      <aside class="contact" aria-labelledby="contents-heading">
+        <h2 id="contents-heading">On this page</h2>
+        <ol class="contents">
+          <li><a href="#local">On-device information</a></li>
+          <li><a href="#notifications">Notifications</a></li>
+          <li><a href="#diagnostics">Local diagnostics</a></li>
+          <li><a href="#sharing">Sharing files</a></li>
+          <li><a href="#erase">Erasing data</a></li>
+          <li><a href="#feedback">Support &amp; TestFlight</a></li>
+          <li><a href="#contact">Privacy questions</a></li>
+        </ol>
+      </aside>
+    </div>
+  </main>
+  <footer class="wrap"><p>Daily Rhythm · Privacy review draft · Prepared 20 September 2026</p><p><a href="index.html">Get help with Daily Rhythm</a></p></footer>
+</body>
+</html>

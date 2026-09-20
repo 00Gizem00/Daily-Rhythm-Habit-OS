@@ -83,7 +83,7 @@ python3 scripts/inspect_release_archive.py /tmp/DailyRhythm-review.xcarchive
 | Deployment coverage | iOS 18 minimum and iPad support are compiled, but this candidate was exercised only on the existing iOS 26.5 iPhone Simulator. No alternate Simulator was selected. Supported-device/version matrix still needs approved execution. |
 | Screenshots | Device Hub returned timeout `-10005` again. No candidate screenshot or UI pass was fabricated from a render or an earlier build. Capture real screenshots with synthetic data after access works. |
 | Distribution/account | App Store Connect record, unique build number, distribution signing, export compliance, validation/processing and beta review unverified. No upload authorized/performed in this task. |
-| Public information | Support email confirmed: Contact@lumetechllc.com. Owner-selected support/privacy URLs, legal-policy confirmation, private review contact and actual report-retention/destination policy still needed. |
+| Public information | Support email confirmed: Contact@lumetechllc.com. [Support/privacy HTML previews](../release/web-preview/README.md) prepared and browser-checked; optional app diagnostics and automatic TestFlight collection are explicitly distinguished. These are unpublished drafts. Owner-selected support/privacy URLs, legal-policy confirmation, private review contact and actual report-retention/destination policy still needed. |
 | CI | Previous workflow runs failed to start due to the account billing lock. The PR records its own fresh run; local results are not a green CI claim. |
 | Pilot outcome | Protocol/templates ready; no testers recruited, no day-7/day-14 observations or findings yet. Link actual findings to the decision before closing #21. |
 
