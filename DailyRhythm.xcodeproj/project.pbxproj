@@ -17,6 +17,12 @@
 			"path" = "DailyRhythm/App/AppModel.swift";
 			"sourceTree" = "<group>";
 		};
+		"29261A3C2A0A1D643134CC8C" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "DailyRhythm/App/BetaHelpView.swift";
+			"sourceTree" = "<group>";
+		};
 		"46DE3E1D92EDD51CE7D02F7D" = {
 			"isa" = "PBXFileReference";
 			"lastKnownFileType" = "sourcecode.swift";
@@ -197,6 +203,12 @@
 			"path" = "DailyRhythm/Resources/PrivacyInfo.xcprivacy";
 			"sourceTree" = "<group>";
 		};
+		"B473D79CA7C5A5D296F49946" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "folder.assetcatalog";
+			"path" = "DailyRhythm/Resources/Assets.xcassets";
+			"sourceTree" = "<group>";
+		};
 		"B6CDB6E5D160E013280D3C68" = {
 			"isa" = "PBXFileReference";
 			"explicitFileType" = "wrapper.application";
@@ -233,6 +245,7 @@
 			"children" = (
 				"E7B47918FDED853AF263CECA",
 				"C1809F641ADF972B5E7AAA1C",
+				"29261A3C2A0A1D643134CC8C",
 				"46DE3E1D92EDD51CE7D02F7D",
 				"1153026B2470153E22E27B4C",
 				"0FCED9FB4E2CA2BA1A82C715",
@@ -263,6 +276,7 @@
 				"10FA34F021C4DAE3C018E3F7",
 				"04C8B4C0515FB7E7C907B3AF",
 				"730238439602493911E6A54F",
+				"B473D79CA7C5A5D296F49946",
 				"00C45FD35CB0F9C5F764F070",
 			);
 			"sourceTree" = "<group>";
@@ -297,7 +311,7 @@
 				"CLANG_WARN__DUPLICATE_METHOD_MATCH" = "YES";
 				"CODE_SIGN_STYLE" = "Automatic";
 				"DEVELOPMENT_TEAM" = "U54BLJMYG6";
-				"CURRENT_PROJECT_VERSION" = "1";
+				"CURRENT_PROJECT_VERSION" = "2";
 				"IPHONEOS_DEPLOYMENT_TARGET" = "18.0";
 				"MARKETING_VERSION" = "0.1.0";
 				"SDKROOT" = "iphoneos";
@@ -349,7 +363,7 @@
 				"CLANG_WARN__DUPLICATE_METHOD_MATCH" = "YES";
 				"CODE_SIGN_STYLE" = "Automatic";
 				"DEVELOPMENT_TEAM" = "U54BLJMYG6";
-				"CURRENT_PROJECT_VERSION" = "1";
+				"CURRENT_PROJECT_VERSION" = "2";
 				"IPHONEOS_DEPLOYMENT_TARGET" = "18.0";
 				"MARKETING_VERSION" = "0.1.0";
 				"SDKROOT" = "iphoneos";
@@ -389,6 +403,10 @@
 		"25211B3F1B78A0A5E408DD79" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "C1809F641ADF972B5E7AAA1C";
+		};
+		"4EF6602DE6D3DA9366678EB3" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "29261A3C2A0A1D643134CC8C";
 		};
 		"215F866B208527E3F4FC64A3" = {
 			"isa" = "PBXBuildFile";
@@ -500,6 +518,7 @@
 			"files" = (
 				"2D315FF7E127B2B372DBEB6F",
 				"25211B3F1B78A0A5E408DD79",
+				"4EF6602DE6D3DA9366678EB3",
 				"215F866B208527E3F4FC64A3",
 				"59C757D1A117549C7F84857E",
 				"78D6F1FCCDBDBBFE568644B2",
@@ -550,11 +569,16 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "730238439602493911E6A54F";
 		};
+		"C0CFCA0DCC416EA644446C08" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "B473D79CA7C5A5D296F49946";
+		};
 		"C84B5C31679C986BFD935BC6" = {
 			"isa" = "PBXResourcesBuildPhase";
 			"buildActionMask" = 2147483647;
 			"files" = (
 				"33D765A91771EF8D69698F6E",
+				"C0CFCA0DCC416EA644446C08",
 			);
 			"runOnlyForDeploymentPostprocessing" = 0;
 		};
@@ -572,7 +596,7 @@
 			);
 			"name" = "Check loaded Swift source membership";
 			"shellPath" = "/bin/sh";
-			"shellScript" = "/usr/bin/python3 -B \"$SRCROOT/scripts/check_source_membership.py\" --root \"$SRCROOT\" --target app --expected 569022a1c7097b2aa6e74e9616f1ce6778cfd8d35126f922607eef64b043f310\n";
+			"shellScript" = "/usr/bin/python3 -B \"$SRCROOT/scripts/check_source_membership.py\" --root \"$SRCROOT\" --target app --expected d3d5e93e9c16a7110b975d08985e1d62f78ef6a7c422043f7b91d028e267418c\n";
 			"alwaysOutOfDate" = 1;
 			"runOnlyForDeploymentPostprocessing" = 0;
 		};
@@ -620,6 +644,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
 				"SWIFT_OPTIMIZATION_LEVEL" = "-Onone";
 				"DEBUG_INFORMATION_FORMAT" = "dwarf";
 				"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "$(inherited) DEBUG";
@@ -639,6 +664,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
 				"SWIFT_OPTIMIZATION_LEVEL" = "-O";
 				"DEBUG_INFORMATION_FORMAT" = "dwarf-with-dsym";
 			};

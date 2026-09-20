@@ -55,10 +55,12 @@ def generate():
     sources = sorted(set(app_sources + shared_sources + widget_sources + schema_test_sources))
     file_refs = {}
     resource = "DailyRhythm/Resources/PrivacyInfo.xcprivacy"
-    for path in [str(p.relative_to(ROOT)) for p in sources] + [resource]:
+    assets = "DailyRhythm/Resources/Assets.xcassets"
+    for path in [str(p.relative_to(ROOT)) for p in sources] + [resource, assets]:
         file_refs[path] = obj(
             f"file:{path}", isa="PBXFileReference",
-            lastKnownFileType="sourcecode.swift" if path.endswith(".swift") else "text.xml",
+            lastKnownFileType=("sourcecode.swift" if path.endswith(".swift") else
+                               "folder.assetcatalog" if path.endswith(".xcassets") else "text.xml"),
             path=path, sourceTree="<group>",
         )
     app_product = obj("product:app", isa="PBXFileReference", explicitFileType="wrapper.application",
@@ -99,7 +101,7 @@ def generate():
         # LumeTech owns both bundle IDs and the shared App Group. Keep all targets
         # on this team when regenerating the project after source changes.
         "DEVELOPMENT_TEAM": "U54BLJMYG6",
-        "CURRENT_PROJECT_VERSION": "1",
+        "CURRENT_PROJECT_VERSION": "2",
         "IPHONEOS_DEPLOYMENT_TARGET": "18.0",
         "MARKETING_VERSION": "0.1.0",
         "SDKROOT": "iphoneos",
@@ -178,8 +180,11 @@ def generate():
         frameworks = obj(f"frameworks:{kind}", isa="PBXFrameworksBuildPhase", buildActionMask=2147483647,
                          files=[package_build], runOnlyForDeploymentPostprocessing=0)
         resource_build = obj(f"resource:{kind}", isa="PBXBuildFile", fileRef=file_refs[resource])
+        resource_builds = [resource_build]
+        if kind == "app":
+            resource_builds.append(obj("resource:app:assets", isa="PBXBuildFile", fileRef=file_refs[assets]))
         resources = obj(f"resources:{kind}", isa="PBXResourcesBuildPhase", buildActionMask=2147483647,
-                        files=[resource_build], runOnlyForDeploymentPostprocessing=0)
+                        files=resource_builds, runOnlyForDeploymentPostprocessing=0)
         settings = {
             "PRODUCT_NAME": "$(TARGET_NAME)",
             "PRODUCT_BUNDLE_IDENTIFIER": "com.lumetechllc.DailyRhythm" + (".Widgets" if kind == "widget" else ""),
@@ -195,6 +200,7 @@ def generate():
             settings.update({"APPLICATION_EXTENSION_API_ONLY": "YES", "SKIP_INSTALL": "YES",
                              "SWIFT_ACTIVE_COMPILATION_CONDITIONS": "$(inherited) WIDGET_EXTENSION"})
         else:
+            settings["ASSETCATALOG_COMPILER_APPICON_NAME"] = "AppIcon"
             embed = obj("embed:widget", isa="PBXBuildFile", fileRef=widget_product,
                         settings={"ATTRIBUTES": ["RemoveHeadersOnCopy"]})
             phases.append(obj("phase:embed", isa="PBXCopyFilesBuildPhase", buildActionMask=2147483647,

@@ -67,6 +67,7 @@ import UIKit
             } catch LocalDataError.restoreRequiresEmptyStore { checks.append("restore refuses populated store") }
             privacy.restorePreview = nil
             let oldGeneration = try store.validateAccess()
+            UserDefaults.standard.set(false, forKey: "dailyRhythm.completionHaptics")
             setup.choose(.morning)
             let oldDraft = setup.progress.draft!
             _ = try await RhythmNotifications.coordinator().update(.dailyClose(false))
@@ -86,6 +87,7 @@ import UIKit
             try check(try FileManager.default.attributesOfItem(atPath: lockURL.path)[.systemFileNumber] as? NSNumber == inode, "erase keeps stable lock inode")
             for version in [1, 2] { try check(!FileManager.default.fileExists(atPath: store.migrationBackupURL(from: version).path), "erase removes v\(version) backup") }
             try check(setup.progress.draft == nil && UserDefaults.standard.data(forKey: "dailyRhythm.onboarding.v1") == nil, "erase clears setup draft and defaults")
+            try check(UserDefaults.standard.object(forKey: "dailyRhythm.completionHaptics") == nil, "erase clears the optional haptic preference")
             try check(model.habits.isEmpty && model.lastUndo == nil, "erase clears app caches and undo")
             let client = SystemRhythmNotificationClient()
             let pending = await client.pending(), delivered = await client.deliveredIDs()

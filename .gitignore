@@ -6,5 +6,5 @@ xcuserdata/
 *.xcresult
 .swiftpm/
 Local.xcconfig
+ReleaseArtifacts/
 __pycache__/
-

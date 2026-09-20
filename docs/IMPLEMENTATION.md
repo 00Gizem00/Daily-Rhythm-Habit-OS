@@ -143,6 +143,8 @@ Diagnostic export is explicit and uses the existing temporary-file/share cleanup
 
 ## AI and Dynamic Island follow-up
 
+The [0.1.0 (2) Release preparation](verification/ISSUE-21-RELEASE-CANDIDATE.md) adds app-icon packaging and Help & Beta, fixes haptic-preference cleanup during erase, and verifies an isolated build-1-to-build-2 Simulator upgrade. The locally retained archive uses development signing; distribution/account and device/UI gates remain open. The [pilot packet](release/README.md) supplies tester instructions, day-7/day-14 measurement rules and feedback/decision templates without contacting testers or uploading a build.
+
 1. Validate the official reminder schemas against the current Xcode 27 SDK and a Siri AI-enabled physical device. Map creation and `updateReminder` completion onto the same mutation service.
 2. Add a proposal-only PCC planning service with runtime availability, quota and network handling. Manual setup remains available. User review and Apply are required before generating persistent habits.
 3. Implement explicit routine sessions, then display their current step and remaining time through ActivityKit and Dynamic Island. Do not use a permanent all-day Live Activity.

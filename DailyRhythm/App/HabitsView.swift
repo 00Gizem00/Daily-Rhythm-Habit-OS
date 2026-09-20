@@ -76,6 +76,9 @@ struct HabitsView: View {
                 NavigationLink { SetupHelpView() } label: {
                     Label("Widgets & Siri help", systemImage: "square.grid.2x2")
                 }
+                NavigationLink { BetaHelpView() } label: {
+                    Label("Help & Beta", systemImage: "questionmark.circle")
+                }
             }
             Section {
                 Toggle("Completion haptics", isOn: $completionHaptics)
