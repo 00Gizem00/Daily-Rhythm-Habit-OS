@@ -39,7 +39,7 @@ The creation form explains the Free limit before submission and keeps entered va
 
 ## Habit and one-off management
 
-The existing creation form switches between recurring habits and one-off tasks, with explicit civil dates, optional due times in a named timezone, normal/light targets and an optional positive whole-minute duration. A due time does not schedule a notification. `HabitFormDraft` is an unsaved value: field changes, validation and Cancel do not write. Only Create/Save call the normal transaction service. Invalid values and capacity failures retain the form input and report the underlying English error.
+The existing creation form switches between recurring habits and one-off tasks, with explicit civil dates, optional due times in a named timezone, normal/light targets and an optional positive whole-minute duration. A due time schedules a notification only when the user has enabled timed-step reminders and granted permission. `HabitFormDraft` is an unsaved value: field changes, validation and Cancel do not write. Only Create/Save call the normal transaction service. Invalid values and capacity failures retain the form input and report the underlying English error.
 
 Habits rows open a management screen for active or archived plans. **Edit future plan** saves a complete effective-dated revision strictly after today; scheduled revisions are visible and individually editable. Recurrence type stays fixed. A future one-off can edit its definition up to its original planned date. **Edit this step** changes only the selected pending occurrence's targets, optional duration and due value. For an earlier planned day, only due changes are exposed; its historical targets stay intact. Completed steps require Reopen before editing. Moving a one-off's due date never creates a replacement occurrence or changes its history date.
 
@@ -49,7 +49,7 @@ Civil-date pickers use Gregorian UTC to preserve the chosen date string independ
 
 Archive and Restore use the existing history-preserving, capacity-checked commands. Archive stops pending work from the archive date forward; Restore cannot fill an older archived gap, including a missed one-off. Management can complete an exact overdue step with the core due-day guard. Today and widget/Shortcut actions resolve the exact current agenda identity, including explicitly saved carryovers; stale ordinary recurring steps from yesterday are rejected.
 
-[Issue #7 verification](verification/ISSUE-7-MANAGEMENT-VALIDATION.md) distinguishes core checks, native compilation and the user-assisted UI matrix. Calendar import, EventKit, notifications, new Siri schemas and flexible recurrence remain separate work.
+[Issue #7 verification](verification/ISSUE-7-MANAGEMENT-VALIDATION.md) distinguishes core checks, native compilation and the user-assisted UI matrix. Calendar import, EventKit, new Siri schemas and flexible recurrence remain separate work. Optional notifications are described below.
 
 ## Official Siri schema capability spike
 
@@ -106,6 +106,18 @@ Today and History show a live **Daily Close** card with full, light, skipped and
 `RoutineStore.review(at:)` takes one locked snapshot for the agenda, habits, week and tomorrow. App refreshes reuse it after writes and Undo, on foreground/significant time changes and on the existing refresh timer. Counts retain original planned dates: schedule revisions and archive gaps use the model's history rules, one-offs count once, and deferral/late completion never move the denominator. Remaining includes a separately labeled Planned for later subset; no future work is declared missed. Tomorrow uses effective targets and the normal due/day-part/ID order, excludes earlier carryovers and items moved beyond tomorrow, and never inserts records. Gregorian civil-date labels are formatted in UTC so travel does not shift a saved day.
 
 [Issue #13 evidence](verification/ISSUE-13-REVIEW-VALIDATION.md) records 103 passing core tests and the native build. Device Hub and the selected Simulator did not provide usable live/renderer access; light/dark, large-text and interactive checks remain pending, so #13 stays open.
+
+## Optional local notifications
+
+Habits → Notifications has separate timed-step and Daily Close switches, both off by default. Enabling either requests alert/sound permission only if iOS has not already asked. Denied/revoked permission preserves the feature preferences and every manual tracking operation. Settings offers the iOS notification-settings link and a retryable scheduling error.
+
+`RoutineStore.notificationPlan` computes a read-only, seven-civil-day rolling plan. It includes only future unresolved timed occurrences, including saved Later overrides at their original identity. Date-only work is silent. Daily Close follows the current timezone after reconciliation; timed steps preserve their saved timezone/instant. DST uses the model's existing gap/fold rules. The queue is capped at 56 requests with space reserved for Daily Close; stable identifiers and comparison with actual pending requests prevent duplicate additions.
+
+`RhythmNotificationCoordinator` keeps versioned preferences in the existing App Group, separate from habit data. An async, bounded advisory-lock acquisition serializes preference patches and OS queue reconciliation across app/extension processes. Each holder rereads preferences and the store; no lock is held during the permission prompt. App refreshes/mutations, foreground/significant-time changes, ordinary intents, widget/control completion and opt-in schema mutations reconcile. Unreadable plans or partial scheduling failures clear owned requests after acquiring the lock and preserve source bytes. A successfully saved habit action remains successful even if notification scheduling fails.
+
+Only the owned notification prefix is removed. Every reconciliation also clears owned delivered notices to avoid retaining stale prompts; unrelated requests remain. The app delegate is installed at launch and suppresses foreground banners. Taps validate the exact day/occurrence URL and open a fresh, read-only saved review; archived/missing items never resolve to a replacement or perform a completion. Notification copy contains no habit titles, targets or completion totals. There is no remote push, AI scheduling or exact background wake assumption. Seven days can expire without another execution opportunity, and travel changes Daily Close scheduling only when reconciliation runs.
+
+[Issue #14 evidence](verification/ISSUE-14-NOTIFICATIONS-VALIDATION.md) distinguishes 115 passing core tests and signed native builds from actual permission, delivery, extension and tap checks.
 
 ## AI and Dynamic Island follow-up
 
