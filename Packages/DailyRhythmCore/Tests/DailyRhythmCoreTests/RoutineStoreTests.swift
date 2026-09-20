@@ -120,6 +120,8 @@ final class RoutineStoreTests: XCTestCase {
         XCTAssertEqual(try fixture.store.summary(for: instant("2026-09-22T09:00:00Z")).totalCount, 0)
         try fixture.store.reopen(occurrenceID: id)
         XCTAssertEqual(try fixture.store.summary(for: archiveDate).totalCount, 0)
+        try fixture.store.reopen(occurrenceID: id)
+        XCTAssertEqual(try fixture.store.summary(for: archiveDate).totalCount, 0)
     }
 
     func testArchiveRemovesPendingTodayAndRejectsOldWidgetAction() throws {
@@ -198,7 +200,11 @@ final class RoutineStoreTests: XCTestCase {
         _ = try fixture.add(now: instant("2026-09-20T09:00:00Z"))
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: fixture.fileURL)) as? [String: Any])
         var habits = try XCTUnwrap(object["habits"] as? [[String: Any]])
-        habits[0]["weekdays"] = [0, 8]
+        var revisions = try XCTUnwrap(habits[0]["revisions"] as? [[String: Any]])
+        var definition = try XCTUnwrap(revisions[0]["definition"] as? [String: Any])
+        definition["recurrence"] = ["weekly": ["weekdays": [0, 8]]]
+        revisions[0]["definition"] = definition
+        habits[0]["revisions"] = revisions
         object["habits"] = habits
         let invalid = try JSONSerialization.data(withJSONObject: object)
         try invalid.write(to: fixture.fileURL)

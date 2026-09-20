@@ -3,6 +3,12 @@ import Foundation
 struct LocalDay: Sendable {
     let calendar: Calendar
 
+    static let utc: LocalDay = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        return LocalDay(calendar: calendar)
+    }()
+
     init(calendar: Calendar) {
         var gregorian = Calendar(identifier: .gregorian)
         gregorian.timeZone = calendar.timeZone

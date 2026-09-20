@@ -63,7 +63,7 @@ final class AppModel: ObservableObject {
                 refresh()
                 throw AppActionError.dayChanged
             }
-            try store.complete(occurrenceID: occurrence.id, outcome: outcome, now: now)
+            try store.complete(occurrenceID: occurrence.id, outcome: outcome, source: .app, now: now)
         }) {
             lastCompletedID = occurrence.id
             completionFeedback += 1

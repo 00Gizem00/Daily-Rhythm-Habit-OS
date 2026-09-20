@@ -66,7 +66,7 @@ The Xcode project is checked in. After adding or removing Swift source files, ru
 
 ## Next milestones
 
-Official **iOS 27 Siri AI App Schemas**, optional **PCC Build My Routine**, and **Routine Sessions with Live Activities / Dynamic Island** remain planned. The current Shortcuts implementation does not claim schema-driven Siri AI integration. StoreKit, notification scheduling, data export and habit editing are also outside this first slice.
+Official **iOS 27 Siri AI App Schemas**, optional **PCC Build My Routine**, and **Routine Sessions with Live Activities / Dynamic Island** remain planned. The current Shortcuts implementation does not claim schema-driven Siri AI integration. StoreKit, notification scheduling, data export and habit editing screens are also outside this first slice. The [v2 core model](docs/MODEL-V2.md) provides one-off/timed items, future edits, per-occurrence overrides and lossless v1 migration for subsequent UI and Siri work.
 
 Read the [product plan](docs/PRODUCT_PLAN.md) and [implementation notes](docs/IMPLEMENTATION.md) for architecture, remaining work and device checks.
 
