@@ -65,6 +65,18 @@
 			"path" = "DailyRhythm/App/OnboardingView.swift";
 			"sourceTree" = "<group>";
 		};
+		"553D21358C2000E7D2D8CBD3" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "DailyRhythm/App/ReminderSchemaSmoke.swift";
+			"sourceTree" = "<group>";
+		};
+		"2F96191F43AE56B6881F8A46" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "DailyRhythm/App/ReminderSchemaSpike.swift";
+			"sourceTree" = "<group>";
+		};
 		"FBF7983180D06C9418762A45" = {
 			"isa" = "PBXFileReference";
 			"lastKnownFileType" = "sourcecode.swift";
@@ -155,6 +167,8 @@
 				"CDD844629F73EDDB8CBA552B",
 				"0393699B7688D3A4D0A4D7CD",
 				"F33532D8794106084FA90CF7",
+				"553D21358C2000E7D2D8CBD3",
+				"2F96191F43AE56B6881F8A46",
 				"FBF7983180D06C9418762A45",
 				"2ADE4CB8490B32FBE41F0C94",
 				"C3F3F21CA5F01B2FBC89EE1C",
@@ -261,6 +275,14 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "F33532D8794106084FA90CF7";
 		};
+		"22878BDE017C62F13B8D62A5" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "553D21358C2000E7D2D8CBD3";
+		};
+		"D9D9AE395E29F748CDD008B5" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "2F96191F43AE56B6881F8A46";
+		};
 		"A345F0E1148104BBEAE960BC" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "FBF7983180D06C9418762A45";
@@ -303,6 +325,8 @@
 				"C826A589ADF69312A27C49C0",
 				"A35AEEA4C0A58AB2A6961667",
 				"B7AA025ADA0B52F49D55D5E3",
+				"22878BDE017C62F13B8D62A5",
+				"D9D9AE395E29F748CDD008B5",
 				"A345F0E1148104BBEAE960BC",
 				"F1F2CCD9DCF62FD1FAEF3977",
 				"FF0E14AAAAAA8E09B4847F5B",

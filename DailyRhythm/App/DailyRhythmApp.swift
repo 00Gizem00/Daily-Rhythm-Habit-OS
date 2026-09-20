@@ -72,6 +72,9 @@ private struct RhythmRootView: View {
         }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
+            #if DEBUG && DAILY_RHYTHM_SCHEMA_SPIKE && compiler(>=6.4)
+            if #available(iOS 27.0, *) { await ReminderSchemaSmoke.runIfRequested() }
+            #endif
             model.refresh()
             // Extension writes and local midnight can happen without an app event.
             while !Task.isCancelled {
