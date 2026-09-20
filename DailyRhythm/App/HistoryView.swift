@@ -53,7 +53,7 @@ struct HistoryView: View {
         .background(RhythmTheme.canvas)
         .navigationTitle("Your history")
         .navigationBarTitleDisplayMode(.inline)
-        .refreshable { model.refresh() }
+        .refreshable { await MainActor.run { model.refresh() } }
     }
 
     private func total(_ count: Int, label: String, symbol: String, colour: Color) -> some View {

@@ -6,6 +6,8 @@ Daily Rhythm is an English-language native iOS app for small routines that survi
 
 **Status: first implementation milestone.** The local habit loop, SwiftUI screens, interactive widgets and ordinary Siri Shortcuts are implemented in source. Device validation remains necessary before TestFlight. This is not a finished App Store release.
 
+**Validation:** project generation and plist/XML checks pass. Swift tests and the iOS build are not yet verified: [GitHub Actions](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/actions/runs/35479213534) could not start because the repository owner's account is locked due to a billing issue. Run the commands below on a Mac, or rerun CI after the account issue is resolved.
+
 ## In this milestone
 
 - **Today / Next Up:** a clear next action and morning, afternoon and evening groups.

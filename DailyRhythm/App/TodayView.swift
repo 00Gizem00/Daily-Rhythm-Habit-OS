@@ -71,7 +71,7 @@ struct TodayView: View {
         .sheet(item: $creationRoute) { route in
             AddHabitView(readingTemplate: route == .reading)
         }
-        .refreshable { model.refresh() }
+        .refreshable { await MainActor.run { model.refresh() } }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: model.today?.completedCount)
         .sensoryFeedback(.success, trigger: model.completionFeedback)
     }

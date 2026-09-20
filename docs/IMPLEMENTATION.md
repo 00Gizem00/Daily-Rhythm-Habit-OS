@@ -56,4 +56,6 @@ An unsigned Simulator build does not verify signing, App Group provisioning, Sir
 - Test after locking/unlocking, across midnight, after a timezone change and with a stale widget.
 - Test VoiceOver, large Dynamic Type and Reduce Motion.
 
-The current developer environment is Linux without Xcode or Swift. Local checks cover project generation, plist parsing and source consistency; macOS CI and real-device checks are reported separately.
+The current developer environment is Linux without Xcode or Swift. Local project-generation consistency, plist/XML parsing and whitespace checks passed. Fourteen core tests are written but have not run.
+
+The [first GitHub Actions run](https://github.com/00Gizem00/Daily-Rhythm-Habit-OS/actions/runs/35479213534) stopped before allocating a runner or executing any step. GitHub reports: "The job was not started because your account is locked due to a billing issue." Consequently, there is no Swift test result or Xcode build result yet. Resolve the account issue and rerun the workflow, or use the Mac commands in the README. Native compilation and the device checks above remain release gates.

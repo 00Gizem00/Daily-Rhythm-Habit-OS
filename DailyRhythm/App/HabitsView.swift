@@ -91,7 +91,7 @@ struct HabitsView: View {
         } message: {
             Text("Past results stay in your history. Uncompleted steps from today onwards will be removed.")
         }
-        .refreshable { model.refresh() }
+        .refreshable { await MainActor.run { model.refresh() } }
     }
 
     private func habitDetails(_ habit: Habit) -> some View {
