@@ -16,6 +16,7 @@ Daily Rhythm is an English-language native iOS app for small routines that survi
 - **Daily Close and weekly rhythm:** separate full/light/skipped/remaining totals, accessible day tiles and a read-only preview of tomorrow's first planned step. See [review verification](docs/verification/ISSUE-13-REVIEW-VALIDATION.md) for tests and pending visual checks.
 - **Optional local notifications:** Habits → Notifications enables timed-step reminders and Daily Close independently. Both start off; permission is requested only after enabling one. A bounded seven-day schedule refreshes from saved state, and taps open a read-only view of the original step or day. See [notification verification](docs/verification/ISSUE-14-NOTIFICATIONS-VALIDATION.md) for 115 passing core tests, native builds and device checks.
 - **Shared local storage:** app, widget and intents use the same locked, atomically written App Group store.
+- **Data & Privacy:** free, offline JSON/CSV export and JSON recovery into an empty app. Local erase requires typing `ERASE`; a persistent recovery marker blocks old drafts and delayed writes, and interrupted cleanup can be retried. See [export and erase verification](docs/verification/ISSUE-15-DATA-PRIVACY-VALIDATION.md) for 131 passing core tests and remaining device checks.
 - **Widgets:** small and medium Home Screen widgets, plus Lock Screen progress.
 - **Siri Shortcuts:** create a habit, complete a daily step and undo a completion through ordinary App Intents.
 - **Free plan:** three active recurring habits, enforced atomically for creation and restoration. One-off tasks and archived habits do not count; existing data and completion stay available above the limit. See [policy verification](docs/verification/ISSUE-6-FREE-POLICY-VALIDATION.md).
@@ -70,7 +71,7 @@ The Xcode project is checked in. After adding, removing or renaming Swift source
 
 ## Next milestones
 
-Production **iOS 27 Siri AI App Schemas**, optional **PCC Build My Routine**, and **Routine Sessions with Live Activities / Dynamic Island** remain planned. The default Shortcuts implementation does not claim schema-driven Siri AI integration; the reminder schema prototype is opt-in. StoreKit and data export remain separate work. The [v2 core model](docs/MODEL-V2.md) provides one-off/timed items, future edits, per-occurrence overrides and lossless v1 migration used by management and local reminders.
+Production **iOS 27 Siri AI App Schemas**, optional **PCC Build My Routine**, and **Routine Sessions with Live Activities / Dynamic Island** remain planned. The default Shortcuts implementation does not claim schema-driven Siri AI integration; the reminder schema prototype is opt-in. StoreKit remains separate work. The [v2 core model](docs/MODEL-V2.md) provides one-off/timed items, future edits, per-occurrence overrides and lossless v1 migration used by management and local reminders.
 
 Read the [product plan](docs/PRODUCT_PLAN.md) and [implementation notes](docs/IMPLEMENTATION.md) for architecture, remaining work and device checks.
 
