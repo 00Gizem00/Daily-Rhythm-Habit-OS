@@ -18,7 +18,9 @@ public final class RoutineStore: @unchecked Sendable {
     private let saveSnapshot: @Sendable (Data, URL) throws -> Void
     private let capturedGeneration: Result<UUID, Error>
     private let saveLifecycle: @Sendable (RoutineDataLifecycle, URL) throws -> Void
+    private let saveDiagnostics: @Sendable (Data, URL) throws -> Void
     public var lifecycleURL: URL { fileURL.appendingPathExtension("lifecycle") }
+    public var diagnosticsURL: URL { fileURL.appendingPathExtension("pilot-diagnostics") }
 
     public convenience init(fileURL: URL, calendar: Calendar = .current,
                             entitlementProvider: any HabitEntitlementProvider = FreeHabitEntitlementProvider(),
@@ -32,12 +34,14 @@ public final class RoutineStore: @unchecked Sendable {
          entitlementProvider: any HabitEntitlementProvider = FreeHabitEntitlementProvider(),
          expectedGeneration: UUID? = nil,
          saveLifecycle: @escaping @Sendable (RoutineDataLifecycle, URL) throws -> Void = { try $0.write(to: $1) },
+         saveDiagnostics: @escaping @Sendable (Data, URL) throws -> Void = { try LocalDataFiles.write($0, to: $1) },
          saveSnapshot: @escaping @Sendable (Data, URL) throws -> Void) {
         self.fileURL = fileURL
         self.localDay = LocalDay(calendar: calendar)
         self.entitlementProvider = entitlementProvider
         self.saveSnapshot = saveSnapshot
         self.saveLifecycle = saveLifecycle
+        self.saveDiagnostics = saveDiagnostics
         capturedGeneration = Result { try expectedGeneration ?? RoutineDataLifecycle.read(from: fileURL.appendingPathExtension("lifecycle")).generation }
     }
 
@@ -77,7 +81,7 @@ public final class RoutineStore: @unchecked Sendable {
             var lifecycle = try RoutineDataLifecycle.read(from: lifecycleURL)
             guard lifecycle.generation == generation else { throw LocalDataError.staleAction }
             guard lifecycle.erasurePending else { return }
-            for url in [fileURL, migrationBackupURL(from: 1), migrationBackupURL(from: 2)] {
+            for url in [fileURL, migrationBackupURL(from: 1), migrationBackupURL(from: 2), diagnosticsURL] {
                 try LocalDataFiles.removeIfPresent(url)
             }
             lifecycle.erasurePending = false
@@ -96,7 +100,7 @@ public final class RoutineStore: @unchecked Sendable {
     /// Recovery is Free and only replaces an empty validated store. Current-generation
     /// checking, the empty check and atomic persistence happen in the same transaction.
     public func restoreBackup(_ backup: RoutineBackup) throws {
-        try transaction { state in
+        try transaction(observeDiagnostics: false) { state in
             guard state.habits.isEmpty, state.records.isEmpty, (state.dayModes ?? []).isEmpty else {
                 throw LocalDataError.restoreRequiresEmptyStore
             }
@@ -126,6 +130,102 @@ public final class RoutineStore: @unchecked Sendable {
             try LocalDataFiles.write(data, to: destination)
             return ((), false)
         }
+    }
+
+    // Diagnostics use the existing lock and generation barrier, but never participate
+    // in the success/failure of a core save. Only explicit configuration/export throws.
+    public func pilotDiagnosticsStatus(at now: Date = Date()) throws -> PilotDiagnosticsStatus {
+        try checkDate(now)
+        return try withLock {
+            _ = try validateGeneration(RoutineDataLifecycle.read(from: lifecycleURL))
+            guard let document = try readPilotDiagnostics(at: now) else { return .off }
+            return PilotDiagnosticsStatus(enabled: true, observationDay: max(1, document.day(at: now)),
+                                          capacityReached: document.capacityReached)
+        }
+    }
+
+    public func setPilotDiagnosticsEnabled(_ enabled: Bool, at now: Date = Date()) throws {
+        try checkDate(now)
+        try withLock {
+            _ = try validateGeneration(RoutineDataLifecycle.read(from: lifecycleURL))
+            if !enabled { try LocalDataFiles.removeIfPresent(diagnosticsURL); return }
+            if try readPilotDiagnostics(at: now) != nil { return }
+            let (state, _, _) = try readState()
+            let document = try PilotDiagnosticsDocument(startedAt: now, timeZoneIdentifier: localDay.calendar.timeZone.identifier,
+                                                        baseline: state.records.filter(\.isCompleted))
+            try saveDiagnostics(JSONEncoder().encode(document), diagnosticsURL)
+        }
+    }
+
+    public func recordPilotSetupStarted(at now: Date = Date()) {
+        try? withLock {
+            _ = try validateGeneration(RoutineDataLifecycle.read(from: lifecycleURL))
+            guard validDate(now), var document = try readPilotDiagnostics(at: now), now >= document.startedAt,
+                  document.setupStartedAt == nil, document.firstCompletionDay == nil,
+                  try readState().0.habits.isEmpty else { return }
+            document.setupStartedAt = now
+            try saveDiagnostics(JSONEncoder().encode(document), diagnosticsURL)
+        }
+    }
+
+    /// Wrap exactly one user-facing action; failures are best-effort category counts.
+    public func diagnoseAction<T>(surface: PilotInputSurface, at now: Date = Date(), _ action: () throws -> T) rethrows -> T {
+        do { return try action() }
+        catch {
+            recordPilotFailure(PilotFailureCategory.classify(error), surface: surface, at: now)
+            throw error
+        }
+    }
+
+    public func recordPilotFailure(_ category: PilotFailureCategory, surface: PilotInputSurface, at now: Date = Date()) {
+        try? withLock {
+            _ = try validateGeneration(RoutineDataLifecycle.read(from: lifecycleURL))
+            guard validDate(now), var document = try readPilotDiagnostics(at: now), now >= document.startedAt else { return }
+            document.recordFailure(category, surface: surface, at: now)
+            try saveDiagnostics(JSONEncoder().encode(document), diagnosticsURL)
+        }
+    }
+
+    public func pilotDiagnosticsExport(at now: Date = Date()) throws -> Data {
+        try checkDate(now)
+        return try withLock {
+            _ = try validateGeneration(RoutineDataLifecycle.read(from: lifecycleURL))
+            return try encodePilotDiagnostics(at: now)
+        }
+    }
+
+    public func writePilotDiagnosticsExport(to destination: URL, at now: Date = Date()) throws {
+        try checkDate(now)
+        try withLock {
+            _ = try validateGeneration(RoutineDataLifecycle.read(from: lifecycleURL))
+            try LocalDataFiles.write(encodePilotDiagnostics(at: now), to: destination)
+        }
+    }
+
+    private func encodePilotDiagnostics(at now: Date) throws -> Data {
+        guard let document = try readPilotDiagnostics(at: now), now >= document.startedAt else {
+            throw PilotDiagnosticsError.disabled
+        }
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return try encoder.encode(document.export(at: now))
+    }
+
+    private func readPilotDiagnostics(at now: Date) throws -> PilotDiagnosticsDocument? {
+        guard let document = try PilotDiagnosticsDocument.read(from: diagnosticsURL) else { return nil }
+        if now >= document.expiresAt { try LocalDataFiles.removeIfPresent(diagnosticsURL); return nil }
+        return document
+    }
+
+    private func observePilotTransitions(from previous: [DailyOccurrence], to current: [DailyOccurrence]) {
+        let completedBefore = Set(previous.filter(\.isCompleted).map(\.id))
+        let newCompletions = current.filter { $0.isCompleted && !completedBefore.contains($0.id) }
+        guard let now = newCompletions.compactMap(\.completedAt).max() else { return }
+        // The routine write has already committed. Diagnostic I/O can never undo it.
+        do {
+            guard var document = try readPilotDiagnostics(at: now) else { return }
+            document.observe(newCompletions)
+            try saveDiagnostics(JSONEncoder().encode(document), diagnosticsURL)
+        } catch { /* Optional pilot observation may be incomplete; core tracking wins. */ }
     }
 
     /// Archive filtering reflects the latest archive/restore action. `asOf` selects the effective definition.
@@ -703,10 +803,12 @@ public final class RoutineStore: @unchecked Sendable {
         return try body()
     }
 
-    private func transaction<T>(migrate: Bool = true, _ body: (inout StoreDocument) throws -> (T, Bool)) throws -> T {
+    private func transaction<T>(migrate: Bool = true, observeDiagnostics: Bool = true,
+                                _ body: (inout StoreDocument) throws -> (T, Bool)) throws -> T {
         try withLock {
         _ = try validateGeneration(RoutineDataLifecycle.read(from: lifecycleURL))
         var (state, legacyBytes, sourceVersion) = try readState()
+        let previousRecords = state.records
         let (result, changed) = try body(&state)
         if changed || (migrate && legacyBytes != nil) {
             do { try state.validate() }
@@ -721,6 +823,7 @@ public final class RoutineStore: @unchecked Sendable {
                 try saveSnapshot(data, fileURL)
             } catch { throw RoutineStoreError.fileAccess("Save data: \(error.localizedDescription)") }
         }
+        if changed && observeDiagnostics { observePilotTransitions(from: previousRecords, to: state.records) }
         return result
         }
     }

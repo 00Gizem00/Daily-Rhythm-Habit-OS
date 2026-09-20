@@ -1,0 +1,49 @@
+{
+  "baselineSources": {
+    "app": 0,
+    "appIntent": 0,
+    "unknown": 0,
+    "widget": 0
+  },
+  "bestEffort": true,
+  "capacityReached": false,
+  "completionDays": 1,
+  "day14": "awaiting",
+  "day7": "awaiting",
+  "days": [
+    {
+      "day": 1,
+      "full": 3,
+      "light": 1,
+      "sources": {
+        "app": 1,
+        "appIntent": 1,
+        "unknown": 1,
+        "widget": 1
+      }
+    }
+  ],
+  "definitions": {
+    "appIntent": "Known App Intent entry point, including Siri, Shortcuts and configured controls; exact invocation method is not observable.",
+    "baselineSources": "Already-completed records when observation began; excluded from pilot completions. Nil legacy provenance is unknown.",
+    "completion": "First committed full/light transition per occurrence during observation; retries and reopen/recomplete never add another event. Undo does not remove a past observation.",
+    "coverage": "Local optional diagnostics may omit events after an I/O failure or interruption. No automatic upload. Restoring a backup is not a completion event.",
+    "day": "1-based civil day in the timezone captured at opt-in. Day 7/14 are awaiting until that civil day ends.",
+    "failures": "Best-effort failed action attempts by category and entry point; repeated failures may count again and are not activation metrics.",
+    "setup": "First empty-app onboarding or manual-create opening after opt-in. Missing timing is unknown, not zero."
+  },
+  "exportVersion": 1,
+  "failures": [
+    {
+      "category": "staleAction",
+      "count": 1,
+      "day": 1,
+      "surface": "app"
+    }
+  ],
+  "firstCompletionDay": 1,
+  "format": "daily-rhythm-pilot-diagnostics",
+  "observationDay": 1,
+  "setupStartCaptured": true,
+  "setupToFirstCompletionSeconds": 0
+}

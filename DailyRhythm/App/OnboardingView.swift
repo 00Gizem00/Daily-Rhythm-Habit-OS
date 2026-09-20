@@ -7,6 +7,7 @@ struct OnboardingView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var created = false
     @State private var saveError: String?
+    @ObservedObject private var privacy = DataPrivacyModel.shared
 
     var body: some View {
         NavigationStack {
@@ -38,6 +39,16 @@ struct OnboardingView: View {
                     .font(.largeTitle.bold()).fixedSize(horizontal: false, vertical: true)
                 Text("Choose a starting point, edit it to fit your day, then decide what to save. Everything here works offline, without an account or AI.")
                     .foregroundStyle(.secondary)
+                Toggle("Optional local pilot diagnostics", isOn: Binding(
+                    get: { privacy.diagnostics?.enabled == true },
+                    set: { enabled in
+                        privacy.setDiagnosticsEnabled(enabled)
+                        if enabled { (try? SharedRoutineStore.makeStore())?.recordPilotSetupStarted() }
+                    }))
+                    .disabled(privacy.diagnosticsError != nil)
+                Text("Off by default. Count first completions, setup time and action failure categories for 30 days on this device. No habit names or goals. Nothing uploads automatically. Export or turn off and delete diagnostics in Habits → Data & Privacy.")
+                    .font(.footnote).foregroundStyle(.secondary)
+                if let error = privacy.diagnosticsError { Text(error).font(.footnote) }
                 Button("Start with a morning routine", systemImage: "sunrise") { setup.choose(.morning) }
                     .buttonStyle(RhythmPrimaryButtonStyle())
                 Button("Start with an evening routine", systemImage: "moon.stars") { setup.choose(.evening) }
@@ -52,6 +63,7 @@ struct OnboardingView: View {
             .padding(24)
         }
         .background(RhythmTheme.canvas)
+        .task { privacy.refresh() }
     }
 
     private func review(_ draft: OnboardingDraft) -> some View {

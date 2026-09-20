@@ -1,0 +1,54 @@
+{
+  "testedSourceCommit": "8ebf4ce107b826bbfb290b2edfacffd254c082a5",
+  "builtFromWorkingTreeBasedOn": "a8b3aefeb7ed615510967599d0533ffa7af7c4e7",
+  "suites": {
+    "diagnostics": {
+      "device": "A846DE14-5BB1-4F7E-9EEC-D4310CEB07F6",
+      "deviceName": "iPhone 17 Pro",
+      "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+      "suite": "diagnostics",
+      "bundle": "com.lumetechllc.DailyRhythm.Validation20.c0d2f99f291d",
+      "coldLaunchPreservedStoreBytes": true,
+      "originalStoreUnchanged": true,
+      "fixtureAppRemoved": true,
+      "matchingChangedSourceSHA256": {
+        "DailyRhythm/App/AddHabitView.swift": "b030c524b5566b9cee0a538371240cd3841eb6ed89e795e206b402d6eb9a9612",
+        "DailyRhythm/App/AppModel.swift": "eb60e98992967d23ac320c13ff4a7e56af6b5fb15bba2f1a2b346210a8c21795",
+        "DailyRhythm/App/DataPrivacyView.swift": "2b03afe4c37fa97a9da962d36984fb50867d707a0c20941d4ac2f7ade73938c7",
+        "DailyRhythm/App/OnboardingPreferences.swift": "53bd4ae027a83f4b6ee54387a29798177ce3a61fc60bbebd8c0ceeca87cff439",
+        "DailyRhythm/App/OnboardingView.swift": "480e317bcdec8e98b79b12e48b82b0041152d9f42d88ee2a9fc41ba57596eced",
+        "DailyRhythm/App/ReminderSchemaSpike.swift": "8769aa74d31e7b98c8497cf07ad763b969caa1d1877f8900a00fa6314dc76ef1",
+        "DailyRhythm/Shared/RhythmControlIntents.swift": "023e42249598b6abc338730aa7388d5d0d9c0f6d18c70cdd0434b1b7cec0f758",
+        "DailyRhythm/Shared/RhythmIntents.swift": "bba63589d0d4a763790e172d33831eb84c9bfbd04a7df558a13754d8a9be2e40",
+        "DailyRhythm/Shared/SharedRoutineStore.swift": "84dd537320a879a88f9d5aa037c7a6758cbf5795c4cf274f81394fdd0ac1a9dd",
+        "Packages/DailyRhythmCore/Sources/DailyRhythmCore/PilotDiagnostics.swift": "36cb5b598522c3d3ecdab9257f519f7b0f0db9eec80d933f65f95a99f1324a49",
+        "Packages/DailyRhythmCore/Sources/DailyRhythmCore/RoutineStore.swift": "4baca19cd2954f724398e092bb7ceb292dd790adaaef8f77f5537d3af71b8283",
+        "Packages/DailyRhythmCore/Tests/DailyRhythmCoreTests/PilotDiagnosticsTests.swift": "e1a8e064c4fb41bcfd94aeae83cd910323ce597093cdbf18b0c8ffbca50c1fb8"
+      }
+    },
+    "privacy": {
+      "device": "A846DE14-5BB1-4F7E-9EEC-D4310CEB07F6",
+      "deviceName": "iPhone 17 Pro",
+      "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+      "suite": "privacy",
+      "bundle": "com.lumetechllc.DailyRhythm.Validation15.a23e594d9d13",
+      "coldLaunchPreservedStoreBytes": true,
+      "originalStoreUnchanged": true,
+      "fixtureAppRemoved": true,
+      "matchingChangedSourceSHA256": {
+        "DailyRhythm/App/AddHabitView.swift": "b030c524b5566b9cee0a538371240cd3841eb6ed89e795e206b402d6eb9a9612",
+        "DailyRhythm/App/AppModel.swift": "eb60e98992967d23ac320c13ff4a7e56af6b5fb15bba2f1a2b346210a8c21795",
+        "DailyRhythm/App/DataPrivacyView.swift": "2b03afe4c37fa97a9da962d36984fb50867d707a0c20941d4ac2f7ade73938c7",
+        "DailyRhythm/App/OnboardingPreferences.swift": "53bd4ae027a83f4b6ee54387a29798177ce3a61fc60bbebd8c0ceeca87cff439",
+        "DailyRhythm/App/OnboardingView.swift": "480e317bcdec8e98b79b12e48b82b0041152d9f42d88ee2a9fc41ba57596eced",
+        "DailyRhythm/App/ReminderSchemaSpike.swift": "8769aa74d31e7b98c8497cf07ad763b969caa1d1877f8900a00fa6314dc76ef1",
+        "DailyRhythm/Shared/RhythmControlIntents.swift": "023e42249598b6abc338730aa7388d5d0d9c0f6d18c70cdd0434b1b7cec0f758",
+        "DailyRhythm/Shared/RhythmIntents.swift": "bba63589d0d4a763790e172d33831eb84c9bfbd04a7df558a13754d8a9be2e40",
+        "DailyRhythm/Shared/SharedRoutineStore.swift": "84dd537320a879a88f9d5aa037c7a6758cbf5795c4cf274f81394fdd0ac1a9dd",
+        "Packages/DailyRhythmCore/Sources/DailyRhythmCore/PilotDiagnostics.swift": "36cb5b598522c3d3ecdab9257f519f7b0f0db9eec80d933f65f95a99f1324a49",
+        "Packages/DailyRhythmCore/Sources/DailyRhythmCore/RoutineStore.swift": "4baca19cd2954f724398e092bb7ceb292dd790adaaef8f77f5537d3af71b8283",
+        "Packages/DailyRhythmCore/Tests/DailyRhythmCoreTests/PilotDiagnosticsTests.swift": "e1a8e064c4fb41bcfd94aeae83cd910323ce597093cdbf18b0c8ffbca50c1fb8"
+      }
+    }
+  }
+}

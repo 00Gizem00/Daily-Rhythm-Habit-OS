@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run native privacy or accessibility checks on an explicitly supplied, booted Simulator.
+"""Run native checks on an explicitly supplied, booted Simulator.
 
 Creates an isolated app/group in a temporary source copy, never changes Simulator
 devices/runtimes, never reads the user's exported backup, and removes its test app.
@@ -42,15 +42,17 @@ def store_hashes(group: Path | None):
     return {name: hashlib.sha256((group / name).read_bytes()).hexdigest()
             if (group / name).exists() else None
             for name in ["daily-rhythm.json", "daily-rhythm.json.lifecycle",
-                         "daily-rhythm.json.v1-backup", "daily-rhythm.json.v2-backup"]}
+                         "daily-rhythm.json.v1-backup", "daily-rhythm.json.v2-backup",
+                         "daily-rhythm.json.pilot-diagnostics"]}
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--device", required=True, help="Existing booted Simulator UDID; no automatic selection")
-    parser.add_argument("--suite", choices=["privacy", "accessibility"], default="privacy")
+    parser.add_argument("--suite", choices=["privacy", "accessibility", "diagnostics"], default="privacy")
     args = parser.parse_args()
-    issue, helper = (15, "PrivacyValidation") if args.suite == "privacy" else (16, "AccessibilityValidation")
+    issue, helper = {"privacy": (15, "PrivacyValidation"), "accessibility": (16, "AccessibilityValidation"),
+                     "diagnostics": (20, "PilotValidation")}[args.suite]
     environment_key = "DAILY_RHYTHM_" + args.suite.upper() + "_VALIDATION"
     devices = json.loads(command("xcrun", "simctl", "list", "devices", "available", "--json"))["devices"]
     matches = [(runtime, device) for runtime, entries in devices.items() for device in entries
@@ -103,7 +105,7 @@ def main():
         command("xcrun", "simctl", "install", args.device, str(product))
         installed = True
         environment = dict(os.environ)
-        for suite in ["PRIVACY", "ACCESSIBILITY"]:
+        for suite in ["PRIVACY", "ACCESSIBILITY", "DIAGNOSTICS"]:
             environment.pop(f"SIMCTL_CHILD_DAILY_RHYTHM_{suite}_VALIDATION", None)
         environment["SIMCTL_CHILD_" + environment_key] = "1"
         environment.pop("SIMCTL_CHILD_DAILY_RHYTHM_RESTORE_BACKUP", None)
@@ -126,6 +128,7 @@ def main():
             normal_environment = dict(os.environ)
             normal_environment.pop("SIMCTL_CHILD_DAILY_RHYTHM_PRIVACY_VALIDATION", None)
             normal_environment.pop("SIMCTL_CHILD_DAILY_RHYTHM_ACCESSIBILITY_VALIDATION", None)
+            normal_environment.pop("SIMCTL_CHILD_DAILY_RHYTHM_DIAGNOSTICS_VALIDATION", None)
             normal_environment.pop("SIMCTL_CHILD_DAILY_RHYTHM_RESTORE_BACKUP", None)
             manifest["coldLaunch"] = command("xcrun", "simctl", "launch", "--terminate-running-process",
                                               args.device, bundle, env=normal_environment)

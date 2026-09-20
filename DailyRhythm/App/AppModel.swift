@@ -37,6 +37,7 @@ final class AppModel: ObservableObject {
             habits = snapshot.habits
             refreshedAt = now
             loadError = nil
+            _ = try? store.pilotDiagnosticsStatus(at: now) // Purge expired optional observation on refresh.
         } catch {
             // Keep the last successful view available. A read error must never reset data.
             loadError = error.localizedDescription
@@ -46,8 +47,8 @@ final class AppModel: ObservableObject {
 
     @discardableResult
     func addHabit(_ definition: HabitDefinition, expectedGeneration: UUID) -> Bool {
-        performMutation {
-            _ = try SharedRoutineStore.makeStore(expectedGeneration: expectedGeneration).addHabit(definition)
+        performMutation(expectedGeneration: expectedGeneration) { store in
+            _ = try store.addHabit(definition)
         }
     }
 
@@ -58,7 +59,7 @@ final class AppModel: ObservableObject {
     }
 
     func createInitialRoutine(_ draft: OnboardingDraft) -> Bool {
-        performMutation { _ = try SharedRoutineStore.makeStore().createInitialRoutine(draft) }
+        performMutation { _ = try $0.createInitialRoutine(draft) }
     }
 
     func complete(_ occurrence: DailyOccurrence, outcome: CompletionOutcome, requiringToday: Bool = true) {
@@ -75,19 +76,19 @@ final class AppModel: ObservableObject {
 
     func undoLastAction() {
         guard let token = lastUndo else { return }
-        _ = performMutation { try SharedRoutineStore.makeStore().undo(token) }
+        _ = performMutation { try $0.undo(token) }
         lastUndo = nil
         lastActionDescription = nil
     }
 
     func setLightDay(_ enabled: Bool) {
         guard let today else { return }
-        _ = performMutation { try SharedRoutineStore.makeStore().setLightDay(enabled, matching: today) }
+        _ = performMutation { try $0.setLightDay(enabled, matching: today) }
     }
 
     private func act(_ action: OccurrenceAction, on occurrence: DailyOccurrence, requiringToday: Bool = true) {
-        if performMutation({
-            lastUndo = try SharedRoutineStore.makeStore().perform(action, on: occurrence,
+        if performMutation({ store in
+            lastUndo = try store.perform(action, on: occurrence,
                                                                   requiringAgenda: requiringToday)
         }) {
             switch action {
@@ -105,25 +106,24 @@ final class AppModel: ObservableObject {
     }
 
     func archive(_ habit: Habit) {
-        _ = performMutation {
-            try SharedRoutineStore.makeStore().archive(habitID: habit.id)
+        _ = performMutation { store in
+            try store.archive(habitID: habit.id)
         }
     }
 
     func restore(_ habit: Habit) {
-        _ = performMutation { try SharedRoutineStore.makeStore().restore(habitID: habit.id) }
+        _ = performMutation { try $0.restore(habitID: habit.id) }
     }
 
     func editSchedule(habitID: UUID, definition: HabitDefinition, effectiveDayKey: String) -> Bool {
-        performMutation {
-            try SharedRoutineStore.makeStore().editHabit(habitID: habitID, definition: definition,
+        performMutation { store in
+            try store.editHabit(habitID: habitID, definition: definition,
                                                         effectiveDayKey: effectiveDayKey)
         }
     }
 
     func editOccurrence(_ occurrence: DailyOccurrence, draft: HabitFormDraft, dueOnly: Bool) -> Bool {
-        performMutation {
-            let store = try SharedRoutineStore.makeStore()
+        performMutation { store in
             let due = try draft.due()
             if dueOnly { try store.rescheduleOccurrence(occurrenceID: occurrence.id, due: due) }
             else {
@@ -135,9 +135,10 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func performMutation(_ action: () throws -> Void) -> Bool {
+    private func performMutation(expectedGeneration: UUID? = nil, _ action: (RoutineStore) throws -> Void) -> Bool {
         do {
-            try action()
+            let store = try SharedRoutineStore.makeStore(expectedGeneration: expectedGeneration)
+            try store.diagnoseAction(surface: .app) { try action(store) }
             operationError = nil
             RhythmSurfaceRefresh.reload()
             #if DAILY_RHYTHM_SCHEMA_SPIKE && compiler(>=6.4)
