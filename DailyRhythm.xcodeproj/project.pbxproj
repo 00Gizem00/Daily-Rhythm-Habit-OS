@@ -53,6 +53,18 @@
 			"path" = "DailyRhythm/App/HistoryView.swift";
 			"sourceTree" = "<group>";
 		};
+		"20A055101032019E2827E1E7" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "DailyRhythm/App/NotificationDetailView.swift";
+			"sourceTree" = "<group>";
+		};
+		"511C1B36F9DE330CDA765D6E" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "DailyRhythm/App/NotificationSettingsView.swift";
+			"sourceTree" = "<group>";
+		};
 		"0393699B7688D3A4D0A4D7CD" = {
 			"isa" = "PBXFileReference";
 			"lastKnownFileType" = "sourcecode.swift";
@@ -81,6 +93,12 @@
 			"isa" = "PBXFileReference";
 			"lastKnownFileType" = "sourcecode.swift";
 			"path" = "DailyRhythm/App/ReminderSchemaSpike.swift";
+			"sourceTree" = "<group>";
+		};
+		"977811C66384B15F06B867B5" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "DailyRhythm/App/RhythmAppDelegate.swift";
 			"sourceTree" = "<group>";
 		};
 		"71F3F20CBB3E0C2127D7480F" = {
@@ -117,6 +135,12 @@
 			"isa" = "PBXFileReference";
 			"lastKnownFileType" = "sourcecode.swift";
 			"path" = "DailyRhythm/Shared/RhythmIntents.swift";
+			"sourceTree" = "<group>";
+		};
+		"34432C6AC0A36B35993251B2" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "DailyRhythm/Shared/RhythmNotifications.swift";
 			"sourceTree" = "<group>";
 		};
 		"E690C7E94419F4BCE76FD5AA" = {
@@ -203,17 +227,21 @@
 				"A148F626F8925E4C4DCF6209",
 				"364DA79B087F95EB95EF663B",
 				"CDD844629F73EDDB8CBA552B",
+				"20A055101032019E2827E1E7",
+				"511C1B36F9DE330CDA765D6E",
 				"0393699B7688D3A4D0A4D7CD",
 				"F33532D8794106084FA90CF7",
 				"A7DA5C6FDDB37A7628EC27C4",
 				"553D21358C2000E7D2D8CBD3",
 				"2F96191F43AE56B6881F8A46",
+				"977811C66384B15F06B867B5",
 				"71F3F20CBB3E0C2127D7480F",
 				"FBF7983180D06C9418762A45",
 				"2ADE4CB8490B32FBE41F0C94",
 				"C3F3F21CA5F01B2FBC89EE1C",
 				"2E9EF5971B9C89D2F35705D4",
 				"CCE1CF5021FE22EC88EFF875",
+				"34432C6AC0A36B35993251B2",
 				"E690C7E94419F4BCE76FD5AA",
 				"CD8DDFE7AA5D742A41201473",
 				"6CC10E2E896DBD4EFB6D1545",
@@ -372,6 +400,14 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "CDD844629F73EDDB8CBA552B";
 		};
+		"857CDD1CC00817DC42B29441" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "20A055101032019E2827E1E7";
+		};
+		"C842C2C05D92C07C4C6E8922" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "511C1B36F9DE330CDA765D6E";
+		};
 		"A35AEEA4C0A58AB2A6961667" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "0393699B7688D3A4D0A4D7CD";
@@ -391,6 +427,10 @@
 		"D9D9AE395E29F748CDD008B5" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "2F96191F43AE56B6881F8A46";
+		};
+		"5B83E94D02C43D03E1A903FF" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "977811C66384B15F06B867B5";
 		};
 		"4982880094404253B8952F95" = {
 			"isa" = "PBXBuildFile";
@@ -416,6 +456,10 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "CCE1CF5021FE22EC88EFF875";
 		};
+		"851BEC303382F16678995862" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "34432C6AC0A36B35993251B2";
+		};
 		"820FC5200814EA5539B9B55F" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "E690C7E94419F4BCE76FD5AA";
@@ -440,17 +484,21 @@
 				"E38A0AF8334765F9EB9484D1",
 				"51745DB73FD3C7439C0A4F92",
 				"C826A589ADF69312A27C49C0",
+				"857CDD1CC00817DC42B29441",
+				"C842C2C05D92C07C4C6E8922",
 				"A35AEEA4C0A58AB2A6961667",
 				"B7AA025ADA0B52F49D55D5E3",
 				"AD16B0B62DB1915EE73A8A24",
 				"22878BDE017C62F13B8D62A5",
 				"D9D9AE395E29F748CDD008B5",
+				"5B83E94D02C43D03E1A903FF",
 				"4982880094404253B8952F95",
 				"A345F0E1148104BBEAE960BC",
 				"F1F2CCD9DCF62FD1FAEF3977",
 				"FF0E14AAAAAA8E09B4847F5B",
 				"9624E632C303060EBF816E9A",
 				"C683522BAD9D0CC7A53C5C5B",
+				"851BEC303382F16678995862",
 				"820FC5200814EA5539B9B55F",
 				"B32D66D25E54000FC5BDBAFF",
 				"6330290B271CFD1DC6AB007F",
@@ -601,6 +649,10 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "CCE1CF5021FE22EC88EFF875";
 		};
+		"628895DC516BF197737B2CE4" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "34432C6AC0A36B35993251B2";
+		};
 		"4877872FD342F2ED30EA75CE" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "E690C7E94419F4BCE76FD5AA";
@@ -621,6 +673,7 @@
 				"0473A5844D2880057E4D48EC",
 				"57528A33D85966EAF85A4E8B",
 				"EAC044663E681631848B3275",
+				"628895DC516BF197737B2CE4",
 				"4877872FD342F2ED30EA75CE",
 				"24104B55F51CCEF3A26A10C9",
 				"A27BF1048A6A6B41AD85798B",

@@ -1,8 +1,10 @@
+import DailyRhythmCore
 import SwiftUI
 import UIKit
 
 @main
 struct DailyRhythmApp: App {
+    @UIApplicationDelegateAdaptor(RhythmAppDelegate.self) private var appDelegate
     @StateObject private var model = AppModel()
     @StateObject private var setup = OnboardingPreferences()
 
@@ -27,7 +29,6 @@ private struct RhythmRootView: View {
     var body: some View {
         TabView(selection: $navigation.selectedTab) {
             NavigationStack { TodayView() }
-                .id(navigation.todayRoute)
                 .tabItem { Label("Today", systemImage: "sun.max") }
                 .tag(0)
             NavigationStack { HabitsView() }
@@ -37,20 +38,24 @@ private struct RhythmRootView: View {
                 .tabItem { Label("History", systemImage: "chart.bar.xaxis") }
                 .tag(2)
         }
+        .id(navigation.todayRoute)
         .onOpenURL { url in
-            guard url == RhythmSurfaceRefresh.todayURL else { return }
-            navigation.openToday()
+            if url == RhythmSurfaceRefresh.todayURL { navigation.openToday() }
+            else if let destination = RhythmNotificationDestination(url: url) { navigation.openNotification(destination) }
         }
         .onChange(of: navigation.todayRoute) { _, _ in
             showingSetup = false
             model.refresh()
         }
         .sheet(isPresented: $showingSetup) { OnboardingView() }
+        .sheet(item: $navigation.notificationRoute) { route in
+            NavigationStack { NotificationDetailView(destination: route.destination) }
+        }
         .onChange(of: model.refreshedAt, initial: true) { _, _ in
             guard !checkedFirstRun, model.today != nil else { return }
             checkedFirstRun = true
             if !model.habits.isEmpty { setup.finish() }
-            else if setup.loadError == nil && setup.progress.shouldOfferAutomatically(hasExistingHabits: false) {
+            else if navigation.notificationRoute == nil && setup.loadError == nil && setup.progress.shouldOfferAutomatically(hasExistingHabits: false) {
                 setup.begin()
                 showingSetup = true
             }

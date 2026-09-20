@@ -7,6 +7,12 @@ enum SharedRoutineStore {
     static let widgetKind = "DailyRhythmToday"
 
     static func makeStore() throws -> RoutineStore {
+        // A future verified StoreKit provider belongs at this shared composition point.
+        RoutineStore(fileURL: try containerURL().appendingPathComponent("daily-rhythm.json"),
+                     entitlementProvider: FreeHabitEntitlementProvider())
+    }
+
+    static func containerURL() throws -> URL {
         guard let identifier = Bundle.main.object(forInfoDictionaryKey: "DailyRhythmAppGroup") as? String,
               !identifier.isEmpty,
               !identifier.contains("$(") else {
@@ -17,10 +23,7 @@ enum SharedRoutineStore {
         ) else {
             throw SharedStoreError.unavailableContainer
         }
-        // Use this composition point for a future verified StoreKit provider shared
-        // by the app, widgets and intents. Production currently always uses Free.
-        return RoutineStore(fileURL: container.appendingPathComponent("daily-rhythm.json"),
-                            entitlementProvider: FreeHabitEntitlementProvider())
+        return container
     }
 }
 

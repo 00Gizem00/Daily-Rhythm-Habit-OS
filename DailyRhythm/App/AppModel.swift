@@ -38,6 +38,7 @@ final class AppModel: ObservableObject {
             // Keep the last successful view available. A read error must never reset data.
             loadError = error.localizedDescription
         }
+        Task { await NotificationSettingsModel.shared.refresh() }
     }
 
     @discardableResult

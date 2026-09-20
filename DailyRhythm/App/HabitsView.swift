@@ -66,6 +66,9 @@ struct HabitsView: View {
                 .listRowBackground(RhythmTheme.card)
             }
             Section("Make it part of your day") {
+                NavigationLink { NotificationSettingsView() } label: {
+                    Label("Notifications", systemImage: "bell")
+                }
                 NavigationLink { SetupHelpView() } label: {
                     Label("Widgets & Siri help", systemImage: "square.grid.2x2")
                 }
