@@ -26,11 +26,11 @@ git diff --check
 | Core regressions | **53 XCTest cases passed, zero failures**, exit 0; 0.815 seconds reported test execution. Includes 44 existing tests and 9 management/draft regressions. |
 | App and widget | **BUILD SUCCEEDED**, exit 0, both Simulator architectures. The generated project includes the three new SwiftUI files in the app target only. |
 | Generated project / whitespace | **Passed**. Project regeneration changes source membership only. |
-| Simulator smoke launch | An earlier build of this branch was installed and launched on the previously selected, already-booted iPhone 17 Pro / iOS 26.5, `A846DE14-5BB1-4F7E-9EEC-D4310CEB07F6`. The existing Read / 10 pages / 2 pages light record appears without a storage-error banner; Today shows a date-only due label and management link. |
+| Simulator smoke launch | The final implementation build was installed and launched on the previously selected, already-booted iPhone 17 Pro / iOS 26.5, `A846DE14-5BB1-4F7E-9EEC-D4310CEB07F6`. The existing Read / 10 pages / 2 pages light record appears without a storage-error banner; Today shows a date-only due label and management link. |
 
 Logs: `/tmp/daily-rhythm-issue-7/swift-test.log`, `xcodebuild.log`, `xcodebuild-final.log`. The build emitted the pre-existing nonfatal App Intents SSU archive diagnostic and ad hoc signed-binary stripping warnings. No setting was changed to suppress them. Native compilation does not establish Siri recognition, notification scheduling or physical-device signing.
 
-No Simulator was created, deleted, switched to another runtime or substituted. No physical-phone data was changed. The [06:59 smoke screenshot](issue-7/today-smoke.png) predates the final management-Undo refinement and year-inclusive date labels; it is a launch smoke result, not final form acceptance evidence. A read-only check of the shared JSON after launch reported v2, 1 habit and 0 records. Test data was not inserted through direct file writes.
+No Simulator was created, deleted, switched to another runtime or substituted. No physical-phone data was changed. The [07:02 final-build smoke screenshot](issue-7/today-smoke.png) includes the final year-inclusive date label; it is a launch smoke result, not form acceptance evidence. The application was installed and relaunched again after the management-Undo refinement; the pre-existing Read habit remains pending (0/1). A read-only check of the shared JSON after launch reported v2, 1 habit and 0 records. Test data was not inserted through direct file writes.
 
 ## Executable behaviour
 
