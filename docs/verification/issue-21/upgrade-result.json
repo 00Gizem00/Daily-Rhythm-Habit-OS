@@ -1,0 +1,34 @@
+{
+  "passed": true,
+  "baselineCommit": "7bbba332748aba193455fcb0a1d259d9f1133424",
+  "candidateCommit": "7bbba332748aba193455fcb0a1d259d9f1133424",
+  "candidateChanges": "M .gitignore\n M DailyRhythm.xcodeproj/project.pbxproj\n M DailyRhythm/App/DataPrivacyView.swift\n M DailyRhythm/App/HabitsView.swift\n M docs/verification/issue-15/PrivacyValidation.swift\n M scripts/generate_project.py\n M scripts/validate_privacy_simulator.py\n?? DailyRhythm/App/BetaHelpView.swift\n?? DailyRhythm/Resources/Assets.xcassets/\n?? docs/release/\n?? docs/verification/issue-21/\n?? scripts/inspect_release_archive.py\n?? scripts/render_app_icon.swift\n?? scripts/validate_upgrade_simulator.py",
+  "device": "A846DE14-5BB1-4F7E-9EEC-D4310CEB07F6",
+  "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+  "bundle": "com.lumetechllc.DailyRhythm.Validation21.eab94b314279",
+  "scope": "In-place Debug-to-Release Simulator upgrade of synthetic app data; not a physical-device or TestFlight install",
+  "baselineBuild": "1",
+  "candidateBuild": "2",
+  "seed": {
+    "hapticPreferenceReadback": false,
+    "passed": true,
+    "seed": "Four plans; full/light/skipped/pending; archived plan; diagnostics; reminder preferences; completed setup; haptic preference; JSON backup"
+  },
+  "baselinePreferencesFlushed": true,
+  "releaseLaunch": "com.lumetechllc.DailyRhythm.Validation21.eab94b314279: 69400",
+  "nativePreferencesPreserved": true,
+  "releaseReadsAllPlans": true,
+  "containerPathsUnchanged": false,
+  "savedFieldsPreserved": true,
+  "preservedFields": [
+    "daily-rhythm.json",
+    "daily-rhythm.json.pilot-diagnostics",
+    "export",
+    "notification-preferences.json"
+  ],
+  "releaseColdLaunch": "com.lumetechllc.DailyRhythm.Validation21.eab94b314279: 69430",
+  "coldLaunchPreferencesPreserved": true,
+  "coldLaunchPreserved": true,
+  "originalStoreUnchanged": true,
+  "fixtureRemoved": true
+}

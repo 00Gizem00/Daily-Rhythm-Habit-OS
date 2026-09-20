@@ -1,0 +1,58 @@
+{
+  "localArchiveChecksPassed": true,
+  "scope": "Local signatures, packaging and disabled experimental/debug entry points only",
+  "targets": [
+    {
+      "bundle": "com.lumetechllc.DailyRhythm",
+      "version": "0.1.0",
+      "build": "2",
+      "minimumOS": "18.0",
+      "team": "U54BLJMYG6",
+      "appGroup": "group.com.lumetechllc.DailyRhythm",
+      "developmentSignature": true,
+      "profileExpires": "2027-09-20T02:48:08Z",
+      "executableSHA256": "6de113e70b55e2e627c0739f93e29335b9d79dcfe9159197ce12fd31629e01bc",
+      "dSYMMatches": true,
+      "ordinaryIntentNames": [
+        "ChooseControlHabitIntent",
+        "CompleteControlHabitIntent",
+        "CompleteOccurrenceIntent",
+        "CompleteWidgetOccurrenceIntent",
+        "CreateHabitIntent",
+        "OpenTodayIntent",
+        "ReopenOccurrenceIntent"
+      ],
+      "schemaIntentsAbsent": true,
+      "debugRecoveryEntryPointAbsent": true
+    },
+    {
+      "bundle": "com.lumetechllc.DailyRhythm.Widgets",
+      "version": "0.1.0",
+      "build": "2",
+      "minimumOS": "18.0",
+      "team": "U54BLJMYG6",
+      "appGroup": "group.com.lumetechllc.DailyRhythm",
+      "developmentSignature": true,
+      "profileExpires": "2027-09-20T02:48:11Z",
+      "executableSHA256": "b24200d5d618a8f21199275b5f53e12fa9acff475a9457a662a960de8a42f989",
+      "dSYMMatches": true,
+      "ordinaryIntentNames": [
+        "ChooseControlHabitIntent",
+        "CompleteControlHabitIntent",
+        "CompleteOccurrenceIntent",
+        "CompleteWidgetOccurrenceIntent",
+        "CreateHabitIntent",
+        "OpenTodayIntent",
+        "ReopenOccurrenceIntent"
+      ],
+      "schemaIntentsAbsent": true,
+      "debugRecoveryEntryPointAbsent": true
+    }
+  ],
+  "iconCatalogPresent": true,
+  "developmentSigned": true,
+  "testFlightValidated": false,
+  "sourceCommit": "a5127fade21ae2ca3e3e7d22ec1ca96e4b33b02c",
+  "buildProvenance": "Release archive after source commit; remaining working-tree changes are documentation/evidence only.",
+  "archiveZipSHA256": "9af5805aba7fea317c7441413ea7d0f1276110465769be68fff9321c7653a2b6"
+}
