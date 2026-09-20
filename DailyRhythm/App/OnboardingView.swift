@@ -109,11 +109,13 @@ struct OnboardingView: View {
     }
 
     private var returning: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Your plan is already here.").font(.title2.bold())
-            Text("Continue in Today. You can add or edit habits from Habits, and find widget and Siri help there too.")
-            Button("Continue to Today") { setup.finish(); dismiss() }.buttonStyle(RhythmPrimaryButtonStyle())
-        }.padding(24)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                Text("Your plan is already here.").font(.title2.bold())
+                Text("Continue in Today. You can add or edit habits from Habits, and find widget and Siri help there too.")
+                Button("Continue to Today") { setup.finish(); dismiss() }.buttonStyle(RhythmPrimaryButtonStyle())
+            }.padding(24)
+        }
     }
 
     private func confirm(_ draft: OnboardingDraft) {

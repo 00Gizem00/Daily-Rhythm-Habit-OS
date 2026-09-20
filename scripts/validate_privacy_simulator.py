@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run app-model privacy checks on an explicitly supplied, already booted Simulator.
+"""Run native privacy or accessibility checks on an explicitly supplied, booted Simulator.
 
 Creates an isolated app/group in a temporary source copy, never changes Simulator
 devices/runtimes, never reads the user's exported backup, and removes its test app.
@@ -48,21 +48,24 @@ def store_hashes(group: Path | None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--device", required=True, help="Existing booted Simulator UDID; no automatic selection")
+    parser.add_argument("--suite", choices=["privacy", "accessibility"], default="privacy")
     args = parser.parse_args()
+    issue, helper = (15, "PrivacyValidation") if args.suite == "privacy" else (16, "AccessibilityValidation")
+    environment_key = "DAILY_RHYTHM_" + args.suite.upper() + "_VALIDATION"
     devices = json.loads(command("xcrun", "simctl", "list", "devices", "available", "--json"))["devices"]
     matches = [(runtime, device) for runtime, entries in devices.items() for device in entries
                if device["udid"] == args.device and device["state"] == "Booted"]
     if len(matches) != 1:
         parser.error("The exact supplied Simulator must already be booted. No device will be started or substituted.")
     runtime, device = matches[0]
-    output = Path(tempfile.mkdtemp(prefix="daily-rhythm-privacy-simulator-"))
+    output = Path(tempfile.mkdtemp(prefix=f"daily-rhythm-{args.suite}-simulator-"))
     fixture = output / "fixture"
     fixture.mkdir()
     suffix = uuid.uuid4().hex[:12]
-    bundle = PRODUCT + ".Validation15." + suffix
+    bundle = PRODUCT + f".Validation{issue}." + suffix
     manifest = {"sourceCommit": command("git", "rev-parse", "HEAD", cwd=ROOT),
                 "device": args.device, "deviceName": device["name"], "runtime": runtime,
-                "bundle": bundle, "output": str(output),
+                "suite": args.suite, "bundle": bundle, "output": str(output),
                 "sourceChanges": command("git", "status", "--porcelain", cwd=ROOT)}
     original_group = group_path(args.device, PRODUCT)
     original_hashes = store_hashes(original_group)
@@ -78,9 +81,9 @@ def main():
         app = fixture / "DailyRhythm/App/DailyRhythmApp.swift"
         marker = "guard scenePhase == .active else { return }"
         assert app.read_text().count(marker) == 1, "Expected one app foreground task"
-        app.write_text(app.read_text().replace(marker, marker + "\n            await PrivacyValidation.run(model: model, setup: setup)"))
-        shutil.copyfile(ROOT / "docs/verification/issue-15/PrivacyValidation.swift",
-                        fixture / "DailyRhythm/App/PrivacyValidation.swift")
+        app.write_text(app.read_text().replace(marker, marker + f"\n            await {helper}.run(model: model, setup: setup)"))
+        shutil.copyfile(ROOT / f"docs/verification/issue-{issue}/{helper}.swift",
+                        fixture / f"DailyRhythm/App/{helper}.swift")
         info = fixture / "DailyRhythm/Info.plist"
         values = plistlib.loads(info.read_bytes())
         values["CFBundleDisplayName"] = "Daily Rhythm QA"
@@ -99,11 +102,14 @@ def main():
         command("codesign", "--verify", "--deep", "--strict", str(product))
         command("xcrun", "simctl", "install", args.device, str(product))
         installed = True
-        environment = dict(os.environ, SIMCTL_CHILD_DAILY_RHYTHM_PRIVACY_VALIDATION="1")
+        environment = dict(os.environ)
+        for suite in ["PRIVACY", "ACCESSIBILITY"]:
+            environment.pop(f"SIMCTL_CHILD_DAILY_RHYTHM_{suite}_VALIDATION", None)
+        environment["SIMCTL_CHILD_" + environment_key] = "1"
         environment.pop("SIMCTL_CHILD_DAILY_RHYTHM_RESTORE_BACKUP", None)
         manifest["validationLaunch"] = command("xcrun", "simctl", "launch", args.device, bundle, env=environment)
         data = Path(command("xcrun", "simctl", "get_app_container", args.device, bundle, "data"))
-        report = data / "Documents/privacy-validation-result.json"
+        report = data / f"Documents/{args.suite}-validation-result.json"
         print("Running native model/service checks…", flush=True)
         deadline = time.monotonic() + 90
         while not report.exists() and time.monotonic() < deadline:
@@ -119,6 +125,7 @@ def main():
             saved = (fixture_group / "daily-rhythm.json").read_bytes()
             normal_environment = dict(os.environ)
             normal_environment.pop("SIMCTL_CHILD_DAILY_RHYTHM_PRIVACY_VALIDATION", None)
+            normal_environment.pop("SIMCTL_CHILD_DAILY_RHYTHM_ACCESSIBILITY_VALIDATION", None)
             normal_environment.pop("SIMCTL_CHILD_DAILY_RHYTHM_RESTORE_BACKUP", None)
             manifest["coldLaunch"] = command("xcrun", "simctl", "launch", "--terminate-running-process",
                                               args.device, bundle, env=normal_environment)

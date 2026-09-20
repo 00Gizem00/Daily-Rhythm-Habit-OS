@@ -5,6 +5,7 @@ struct HabitsView: View {
     @EnvironmentObject private var model: AppModel
     @State private var creationRoute: HabitCreationRoute?
     @State private var archiveCandidate: Habit?
+    @AppStorage("dailyRhythm.completionHaptics") private var completionHaptics = true
 
     var body: some View {
         List {
@@ -75,6 +76,11 @@ struct HabitsView: View {
                 NavigationLink { SetupHelpView() } label: {
                     Label("Widgets & Siri help", systemImage: "square.grid.2x2")
                 }
+            }
+            Section {
+                Toggle("Completion haptics", isOn: $completionHaptics)
+            } header: { Text("Feedback") } footer: {
+                Text("Play a short haptic after a full or light step is saved while Daily Rhythm is open. Availability depends on your device and iOS settings.")
             }
         }
         .scrollContentBackground(.hidden)

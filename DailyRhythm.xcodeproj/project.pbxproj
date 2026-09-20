@@ -155,6 +155,12 @@
 			"path" = "DailyRhythm/Shared/RhythmOccurrenceEntity.swift";
 			"sourceTree" = "<group>";
 		};
+		"0BC9C6D11F4746638C08BFDC" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "DailyRhythm/Shared/RhythmPalette.swift";
+			"sourceTree" = "<group>";
+		};
 		"CD8DDFE7AA5D742A41201473" = {
 			"isa" = "PBXFileReference";
 			"lastKnownFileType" = "sourcecode.swift";
@@ -250,6 +256,7 @@
 				"CCE1CF5021FE22EC88EFF875",
 				"34432C6AC0A36B35993251B2",
 				"E690C7E94419F4BCE76FD5AA",
+				"0BC9C6D11F4746638C08BFDC",
 				"CD8DDFE7AA5D742A41201473",
 				"6CC10E2E896DBD4EFB6D1545",
 				"A3849D3F517159EEAE7F5C65",
@@ -475,6 +482,10 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "E690C7E94419F4BCE76FD5AA";
 		};
+		"6288DFD54A48FC3586686C87" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "0BC9C6D11F4746638C08BFDC";
+		};
 		"B32D66D25E54000FC5BDBAFF" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "CD8DDFE7AA5D742A41201473";
@@ -512,6 +523,7 @@
 				"C683522BAD9D0CC7A53C5C5B",
 				"851BEC303382F16678995862",
 				"820FC5200814EA5539B9B55F",
+				"6288DFD54A48FC3586686C87",
 				"B32D66D25E54000FC5BDBAFF",
 				"6330290B271CFD1DC6AB007F",
 			);
@@ -560,7 +572,7 @@
 			);
 			"name" = "Check loaded Swift source membership";
 			"shellPath" = "/bin/sh";
-			"shellScript" = "/usr/bin/python3 -B \"$SRCROOT/scripts/check_source_membership.py\" --root \"$SRCROOT\" --target app --expected 4f91784afec5c1456fec74143a8a0df013f1d87f7873d2ca6dd920a66f7ce78f\n";
+			"shellScript" = "/usr/bin/python3 -B \"$SRCROOT/scripts/check_source_membership.py\" --root \"$SRCROOT\" --target app --expected 569022a1c7097b2aa6e74e9616f1ce6778cfd8d35126f922607eef64b043f310\n";
 			"alwaysOutOfDate" = 1;
 			"runOnlyForDeploymentPostprocessing" = 0;
 		};
@@ -688,6 +700,10 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "E690C7E94419F4BCE76FD5AA";
 		};
+		"7EE713981140A4F7463F234F" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "0BC9C6D11F4746638C08BFDC";
+		};
 		"24104B55F51CCEF3A26A10C9" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "CD8DDFE7AA5D742A41201473";
@@ -706,6 +722,7 @@
 				"EAC044663E681631848B3275",
 				"628895DC516BF197737B2CE4",
 				"4877872FD342F2ED30EA75CE",
+				"7EE713981140A4F7463F234F",
 				"24104B55F51CCEF3A26A10C9",
 				"A27BF1048A6A6B41AD85798B",
 			);
@@ -754,7 +771,7 @@
 			);
 			"name" = "Check loaded Swift source membership";
 			"shellPath" = "/bin/sh";
-			"shellScript" = "/usr/bin/python3 -B \"$SRCROOT/scripts/check_source_membership.py\" --root \"$SRCROOT\" --target widget --expected 17803afbf1d3f531489515487aaeefe1f2d5c15fea348e9a738af73aca15a54a\n";
+			"shellScript" = "/usr/bin/python3 -B \"$SRCROOT/scripts/check_source_membership.py\" --root \"$SRCROOT\" --target widget --expected 063b2ab5801a296419e372d8f8502da24dee10991cabe0feac8e9ffa21e394ed\n";
 			"alwaysOutOfDate" = 1;
 			"runOnlyForDeploymentPostprocessing" = 0;
 		};

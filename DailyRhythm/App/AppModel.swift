@@ -12,6 +12,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var loadError: String?
     @Published var operationError: String?
     @Published private(set) var lastUndo: OccurrenceUndo?
+    @Published private(set) var lastActionDescription: String?
     @Published private(set) var agenda: DailyAgenda?
     @Published private(set) var completionFeedback = 0
     @Published private(set) var refreshedAt = Date()
@@ -52,8 +53,8 @@ final class AppModel: ObservableObject {
 
     func clearForErasure() {
         today = nil; habits = []; review = nil; agenda = nil
-        lastUndo = nil; operationError = nil; loadError = nil
-        completionFeedback = 0
+        lastUndo = nil; lastActionDescription = nil; operationError = nil; loadError = nil
+        // Keep the event counter monotonic: clearing data is not a completion event.
     }
 
     func createInitialRoutine(_ draft: OnboardingDraft) -> Bool {
@@ -76,6 +77,7 @@ final class AppModel: ObservableObject {
         guard let token = lastUndo else { return }
         _ = performMutation { try SharedRoutineStore.makeStore().undo(token) }
         lastUndo = nil
+        lastActionDescription = nil
     }
 
     func setLightDay(_ enabled: Bool) {
@@ -87,7 +89,19 @@ final class AppModel: ObservableObject {
         if performMutation({
             lastUndo = try SharedRoutineStore.makeStore().perform(action, on: occurrence,
                                                                   requiringAgenda: requiringToday)
-        }) { completionFeedback += 1 }
+        }) {
+            switch action {
+            case .complete(let outcome):
+                lastActionDescription = "\(occurrence.title): \(outcome == .light ? "light" : "full") step saved"
+                completionFeedback += 1
+            case .skip:
+                lastActionDescription = "\(occurrence.title): skipped, not completed"
+            case .later:
+                lastActionDescription = "\(occurrence.title): postponed by one hour"
+            case .reopen:
+                lastActionDescription = "\(occurrence.title): reopened"
+            }
+        }
     }
 
     func archive(_ habit: Habit) {

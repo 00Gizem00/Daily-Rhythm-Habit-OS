@@ -26,6 +26,8 @@ private struct RhythmRootView: View {
     @State private var checkedFirstRun = false
     @State private var showingSetup = false
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @AppStorage("dailyRhythm.completionHaptics") private var completionHaptics = true
 
     var body: some View {
         TabView(selection: $navigation.selectedTab) {
@@ -42,6 +44,15 @@ private struct RhythmRootView: View {
         .id(navigation.todayRoute)
         .id(model.dataGeneration)
         .disabled(privacy.busy)
+        .sensoryFeedback(.success, trigger: model.completionFeedback) { oldValue, newValue in
+            completionHaptics && newValue > oldValue && scenePhase == .active
+                && model.operationError == nil && model.loadError == nil && !privacy.busy
+        }
+        .onChange(of: model.lastActionDescription) { _, message in
+            guard scenePhase == .active, !privacy.busy, model.operationError == nil,
+                  model.loadError == nil, UIAccessibility.isVoiceOverRunning, let message else { return }
+            UIAccessibility.post(notification: .announcement, argument: message)
+        }
         .overlay {
             if privacy.busy {
                 ProgressView("Erasing local data…").padding(24)
@@ -76,17 +87,19 @@ private struct RhythmRootView: View {
         .foregroundStyle(RhythmTheme.ink)
         .safeAreaInset(edge: .top, spacing: 0) {
             if let error = model.loadError {
-                HStack(alignment: .top, spacing: 12) {
+                (dynamicTypeSize.isAccessibilitySize
+                 ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+                 : AnyLayout(HStackLayout(alignment: .top, spacing: 12))) {
                     Image(systemName: "exclamationmark.circle")
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Your rhythm couldn't be refreshed.")
                             .font(.subheadline.weight(.semibold))
                         Text(error).font(.caption)
                     }
-                    Spacer(minLength: 0)
                     Button("Retry") { model.refresh() }
                         .font(.subheadline.weight(.semibold))
-                        .frame(minHeight: 44)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .buttonStyle(RhythmInlineButtonStyle())
                 }
                 .foregroundStyle(RhythmTheme.ink)
                 .padding(16)
