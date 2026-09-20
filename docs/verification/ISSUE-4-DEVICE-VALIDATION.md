@@ -31,7 +31,7 @@ After assignment, `xcodebuild ... -allowProvisioningUpdates build` exited 0 with
 
 After unlock, a retry of `devicectl device process launch` succeeded and the captured physical-device screen showed the first-habit UI without a storage-error banner. The user had reported a generic "failed" message before that retry; its source/action was not established, so it is not classified as a fixed app defect. No Daily Rhythm crash report was listed at that point. Device Hub UI automation continued to time out, so creation and widget interaction require user-assisted reproduction.
 
-The physical build also logged `Could not archive SSU artifacts` from `appintentsnltrainingprocessor` while returning build success, as in #3. Actual Shortcuts discovery/invocation remains a separate device check; the diagnostic has not been suppressed.
+The physical build also logged `Could not archive SSU artifacts` from `appintentsnltrainingprocessor` while returning build success, as in #3. The diagnostic has not been suppressed. Subsequent device discovery and invocation results are recorded separately below; neither build success nor App Shortcuts discovery establishes Siri voice recognition.
 
 Apple references: [register an App Group](https://developer.apple.com/help/account/identifiers/register-an-app-group), [configure App Groups](https://developer.apple.com/documentation/xcode/configuring-app-groups).
 
@@ -51,7 +51,23 @@ The user then tapped **Done** once in that widget. At approximately 06:01, foreg
 
 Next, the user tapped **Reopen** on the app's Read row and returned to the small widget. They reported that **Read / 10 pages** and **0/1** returned immediately. **App-to-small-widget undo refresh passes by user observation.** No numeric refresh latency was measured, and the underlying file was not extracted.
 
-At approximately 06:04, after explicitly reopening the step and tapping the small widget's **leaf** button, the user confirmed that the tap had been performed. A forced app restart then showed **1/1**, **0 full**, **1 light**, and **Read — Light · 2 pages** ([light completion after restart](issue-4/app-widget-light-after-relaunch.png)). **The small-widget light-completion path also passes visually and persists across process restart.** An earlier readiness reply had been mistaken for a completed leaf tap; the user clarified that they had not tapped it, so the preceding full-state capture is not a reproduced defect or a light-test result.
+At approximately 06:04, after explicitly reopening the step and tapping the small widget's **leaf** button, the user confirmed that the tap had been performed. A forced app restart then showed **1/1**, **0 full**, **1 light**, and **Read — Light · 2 pages** ([light completion after restart](issue-4/app-widget-light-after-relaunch.png)). **The small-widget light-completion path also passes visually and persists across process restart.**
+
+## Shortcuts observations
+
+In the installed Shortcuts app, the user opened **App Shortcuts → Daily Rhythm** and confirmed that **Create Habit**, **Complete Step** and **Undo Step** were all visible. **App Shortcuts discovery passes by user observation**, despite the nonfatal SSU archive diagnostic. Invocation and data changes require the following checks and are not implied by discovery.
+
+At approximately 06:08, the user ran **Undo Step** and selected **Read**, whose existing light completion had been made by the small widget. Foregrounding Daily Rhythm then showed **0/1**, **0 full**, **0 light**, and **Read / 10 pages** as the next pending step ([app after Shortcut undo](issue-4/app-after-shortcut-undo.png)). **Shortcut undo of a widget-created completion passes visually in the foreground app.**
+
+At approximately 06:09, the user ran **Complete Step** for **Read** twice, leaving **Use Small Step** off. A forced app restart showed **1/1**, **1 full**, **0 light**, and **Read — Full · 10 pages** ([app after two Shortcut completions](issue-4/app-after-shortcut-complete-twice.png)). **Shortcut completion and repeated full completion pass visually without an extra completion count.** The first completion timestamp and competing full/light requests have not yet been checked on the physical device.
+
+At approximately 06:10, the user ran **Create Habit** with the name **Read** and defaults (**One step**, **Morning**, **Every Day**). After a forced app restart, the screen showed **1/2**: the original **Read — Full · 10 pages** remained completed, and the new **Read — One step** was pending ([app after Shortcut creation](issue-4/app-after-shortcut-create.png)). **Shortcut creation passes visually and preserves the other habit's existing completion.** All three ordinary App Shortcuts have now been invoked successfully; same-name selection is tested separately.
+
+### Same-name selection defect
+
+After the user reopened the original Read / 10 pages step, both Morning habits were pending. Opening **Complete Step** displayed two identical choices: **Read** with **Morning · 2026-09-20**, omitting the different targets ([picker before fix](issue-4/shortcut-duplicate-picker-before.png)). This is a reproduced selection defect: the user cannot identify the intended habit from those labels. No choice was submitted during this check, so a wrong-record write is not claimed.
+
+`RhythmOccurrenceEntity` now includes the normal target at the start of its display subtitle, followed by the existing daypart, date and recorded status. Occurrence IDs and entity lookup are unchanged. The corrected signed build and physical selection test are pending below.
 
 ## Device matrix
 
@@ -63,9 +79,9 @@ Each row requires an actual result. `Pending` means no pass is claimed. Tests in
 | App create and relaunch | Create a daily reading habit through the UI; record its UUID; terminate/relaunch and check the same habit. | **Partial:** UI creation and visible persistence pass after process restart; Read / 10 pages / Morning / 2 pages light step remains pending (0/1). Raw UUID verification is pending because the device transfer service restricts access to the root-level store. |
 | Widget to app | Add small/medium widgets; complete a named step in the widget; foreground/relaunch the app and compare the persisted occurrence. | **Partial:** small-widget full and light completions both pass visually and survive app restart: Full · 10 pages yields 1 full / 0 light; after explicit Reopen, Light · 2 pages yields 0 full / 1 light. Exact ID/timestamp and medium-widget checks remain pending. |
 | App to widget | Undo/complete in the app; compare saved data immediately and widget rendering after WidgetKit reload. Record latency separately. | **Partial:** after app Reopen, the user observed the small widget immediately return to Read / 10 pages and 0/1. Measured latency, raw data and app completion-to-widget checks remain pending. |
-| Ordinary Shortcuts | Run Create Habit, Complete Daily Step and Undo Daily Step; confirm each mutation in the app and shared store. This does not establish schema-driven Siri AI support. | Pending |
-| Duplicate completion | Repeat completion across two surfaces, including competing full/light requests; retain the first timestamp and outcome until explicit Undo. | Pending |
-| Duplicate names | Create same-name habits with different targets, including the same daypart; select one exact occurrence and confirm the other remains pending. | Pending |
+| Ordinary Shortcuts | Run Create Habit, Complete Daily Step and Undo Daily Step; confirm each mutation in the app and shared store. This does not establish schema-driven Siri AI support. | **Partial:** all three discover and execute successfully. Undo returns the foreground app to 0/1; two Complete runs yield one full completion after restart; Create adds a pending Read / One step while retaining Read / 10 pages as completed. Raw record identity and timestamp are still unverified. |
+| Duplicate completion | Repeat completion across two surfaces, including competing full/light requests; retain the first timestamp and outcome until explicit Undo. | **Partial:** two full completions via Shortcuts leave one visible full completion after app restart. Competing outcomes, cross-surface overlap and the original timestamp remain unverified. |
+| Duplicate names | Create same-name habits with different targets, including the same daypart; select one exact occurrence and confirm the other remains pending. | **Fail on baseline:** two pending Morning Read habits with different targets produce indistinguishable picker rows. Target labels added; signed-build and physical selection verification pending. |
 | Stale widget / archive | Keep an old widget entry, archive its habit in the app, then invoke the old button; reject unavailable work without changing another item. | Pending |
 | Midnight | Invoke an occurrence captured before the date boundary after the boundary; preserve its exact identity and never complete tomorrow's item. | Pending |
 | Locked after first unlock | Lock the iPhone after a successful unlock; exercise a widget/Shortcut and record saved data or an honest system/app rejection. | Pending |

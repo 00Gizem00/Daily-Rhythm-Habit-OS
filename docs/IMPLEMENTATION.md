@@ -31,7 +31,7 @@ The first implementation is for small personal habit sets. Whole-file JSON trans
 
 The current code uses ordinary App Intents and App Shortcuts. Those are useful on iOS 18+, but are not the new iOS 27 `.reminders` App Schemas. Do not advertise natural-language Siri AI support based on this milestone.
 
-Widget completion carries the exact occurrence ID displayed. The intent checks the current day again before writing, so a stale widget cannot complete tomorrow's item. Entity lookup and display include enough context to disambiguate duplicate titles. Repeating create requests currently creates separate habits; only completion/reopen are idempotent.
+Widget completion carries the exact occurrence ID displayed. The intent checks the current day again before writing, so a stale widget cannot complete tomorrow's item. Entity lookup preserves exact IDs. Shortcuts selection shows the target before the daypart, date and recorded status: the #4 physical-device check exposed identical rows for two pending Morning habits named Read with different targets when only daypart/date were shown. Repeating create requests currently creates separate habits; only completion/reopen are idempotent.
 
 The store is shared through `group.com.lumetechllc.DailyRhythm`. The app and extension read the configured identifier from `DailyRhythmAppGroup` in their Info.plist. Physical-device signing must grant both targets the same group. There is no separate fallback database.
 
