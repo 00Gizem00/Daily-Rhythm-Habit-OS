@@ -13,6 +13,7 @@ struct BetaHelpView: View {
                 Text("Create a small routine, record a full or light step, and review your saved history. Manual tracking works offline without an account.")
             }
             Section("Send feedback") {
+                Link("Contact@lumetechllc.com", destination: URL(string: "mailto:Contact@lumetechllc.com")!)
                 Text("If you installed Daily Rhythm through TestFlight, open TestFlight, choose Daily Rhythm and tap Send Beta Feedback.")
                 Text("Include this version, your iOS version, the steps you tried, what you expected and what happened. Mention whether you used the app, a widget, a Shortcut or Siri.")
                 Text("Before sharing a screenshot, check it for private habit names or goals. A routine backup is not needed for an ordinary bug report.")
