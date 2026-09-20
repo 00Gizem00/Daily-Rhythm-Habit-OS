@@ -119,6 +119,33 @@ public final class RoutineStore: @unchecked Sendable {
         try transaction { state in (try self.requireOccurrence(id, state: state), false) }
     }
 
+    /// Management agenda: a one-off remains visible at its original identity regardless
+    /// of due date. Recurring plans show the requested window plus saved pending earlier
+    /// steps (for example a postponed occurrence). Earlier steps completed within this
+    /// window stay visible for Undo; unrecorded missed days are not added.
+    public func managedOccurrences(habitID: UUID, startingOn date: Date = Date(), days: Int = 7) throws -> [DailyOccurrence] {
+        try checkDate(date)
+        guard (1...366).contains(days),
+              let end = localDay.calendar.date(byAdding: .day, value: days - 1, to: date), validDate(end) else {
+            throw RoutineStoreError.invalidHistoryRange
+        }
+        let keys = try localDay.keys(days: days, endingOn: end)
+        return try transaction { state in
+            let habit = state.habits[try self.index(of: habitID, in: state)]
+            var plannedKeys: Set<String>
+            if case .once(let key) = habit.revisions[0].definition.recurrence { plannedKeys = [key] }
+            else {
+                plannedKeys = Set(keys)
+                plannedKeys.formUnion(state.records.filter {
+                    guard $0.habitID == habitID, $0.dayKey < keys[0] else { return false }
+                    guard let completedAt = $0.completedAt else { return true }
+                    return (keys[0]...keys[keys.count - 1]).contains(self.localDay.key(for: completedAt))
+                }.map(\.dayKey))
+            }
+            return (try plannedKeys.sorted().compactMap { try self.occurrence(for: habit, on: $0, state: state) }, false)
+        }
+    }
+
     /// First completion wins, including its source. Early completion is allowed on the due date,
     /// but never before that civil date. Reopen explicitly to choose a different outcome.
     public func complete(occurrenceID: String, outcome: CompletionOutcome = .full,
@@ -127,8 +154,7 @@ public final class RoutineStore: @unchecked Sendable {
         try transaction { state in
             var occurrence = try self.requireOccurrence(occurrenceID, state: state)
             guard !occurrence.isCompleted else { return ((), false) }
-            guard occurrence.due.dayKey(calendar: self.localDay.calendar) <=
-                    occurrence.due.currentDay(at: now, calendar: self.localDay.calendar) else {
+            guard occurrence.canComplete(at: now, calendar: self.localDay.calendar) else {
                 throw RoutineStoreError.futureCompletion
             }
             if outcome == .light && occurrence.lightTarget == nil { throw RoutineStoreError.lightTargetUnavailable }

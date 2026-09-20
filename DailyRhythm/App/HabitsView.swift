@@ -22,7 +22,7 @@ struct HabitsView: View {
                 .listRowBackground(RhythmTheme.card)
             } else {
                 Section {
-                    Text("Your goals repeat on the days you choose. Light versions give you an honest smaller step.")
+                    Text("Manage recurring habits and one-off tasks. Open a plan to edit one step or its future schedule.")
                         .foregroundStyle(RhythmTheme.muted)
                 }
                 .listRowBackground(Color.clear)
@@ -32,7 +32,7 @@ struct HabitsView: View {
                     if !habits.isEmpty {
                         Section(part.displayName) {
                             ForEach(habits, id: \.id) { habit in
-                                habitDetails(habit)
+                                NavigationLink { HabitDetailView(habitID: habit.id) } label: { habitDetails(habit) }
                                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                         Button { archiveCandidate = habit } label: {
                                             Label("Archive", systemImage: "archivebox")
@@ -54,8 +54,9 @@ struct HabitsView: View {
             if !model.archivedHabits.isEmpty {
                 Section {
                     ForEach(model.archivedHabits, id: \.id) { habit in
-                        habitDetails(habit)
-                            .foregroundStyle(RhythmTheme.muted)
+                        NavigationLink { HabitDetailView(habitID: habit.id) } label: {
+                            habitDetails(habit).foregroundStyle(RhythmTheme.muted)
+                        }
                     }
                 } header: {
                     Text("Archived")
@@ -103,7 +104,7 @@ struct HabitsView: View {
                     .font(.caption)
                     .foregroundStyle(RhythmTheme.muted)
             }
-            Text(RhythmDates.scheduleLabel(habit.weekdays))
+            Text(RhythmDates.planLabel(habit.definition))
                 .font(.caption.weight(.medium))
                 .foregroundStyle(RhythmTheme.muted)
         }

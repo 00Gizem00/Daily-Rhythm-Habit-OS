@@ -17,6 +17,7 @@ Daily Rhythm is an English-language native iOS app for small routines that survi
 - **Widgets:** small and medium Home Screen widgets, plus Lock Screen progress.
 - **Siri Shortcuts:** create a habit, complete a daily step and undo a completion through ordinary App Intents.
 - **Free plan:** three active recurring habits, enforced atomically for creation and restoration. One-off tasks and archived habits do not count; existing data and completion stay available above the limit. See [policy verification](docs/verification/ISSUE-6-FREE-POLICY-VALIDATION.md).
+- **Plan management:** create one-offs or recurring habits, set date-only/timed due values and duration, edit one pending step or a future schedule, and restore archived plans. See [management verification](docs/verification/ISSUE-7-MANAGEMENT-VALIDATION.md) for executed checks and pending UI cases.
 
 The core targets **iOS 18+** and works without an account, network or AI service. No demo habits are silently inserted into the user's data.
 
