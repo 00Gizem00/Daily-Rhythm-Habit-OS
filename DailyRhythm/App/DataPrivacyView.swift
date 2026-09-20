@@ -149,16 +149,18 @@ struct DataPrivacyView: View {
         .navigationBarBackButtonHidden(privacy.busy)
         .disabled(privacy.busy)
         .task { privacy.refresh() }
-        .confirmationDialog("Erase all local Daily Rhythm data?", isPresented: Binding(
+        .sheet(isPresented: Binding(
             get: { eraseGeneration != nil }, set: { if !$0 { eraseGeneration = nil } }
-        ), titleVisibility: .visible) {
-            Button("Erase all local data", role: .destructive) {
-                guard let generation = eraseGeneration else { return }
+        )) {
+            EraseLocalDataConfirmation {
                 eraseGeneration = nil
-                Task { await privacy.erase(expectedGeneration: generation, model: model, setup: setup) }
+            } confirm: {
+                if let generation = eraseGeneration {
+                    eraseGeneration = nil
+                    Task { await privacy.erase(expectedGeneration: generation, model: model, setup: setup) }
+                }
             }
-            Button("Cancel", role: .cancel) { eraseGeneration = nil }
-        } message: { Text("This permanently removes local plans and history. Shared exports outside this app remain. Export first if you need a copy.") }
+        }
         .sheet(item: $privacy.share, onDismiss: {
             // The activity callback normally removes its file; swipe dismissal uses the same cleanup.
             privacy.dismissShare()
@@ -166,6 +168,35 @@ struct DataPrivacyView: View {
             RoutineShareSheet(url: share.url) { completed, error in
                 privacy.endShare(url: share.url, completed: completed, failure: error)
             }
+        }
+    }
+}
+
+private struct EraseLocalDataConfirmation: View {
+    let cancel: () -> Void
+    let confirm: () -> Void
+    @State private var confirmation = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text("This permanently removes all local plans and history. There is no Undo.")
+                        .font(.headline)
+                    Text("To keep a copy, cancel and export JSON first. Save the export outside Daily Rhythm before returning here. Previously shared copies and iOS permission choices remain.")
+                }
+                Section("Type ERASE to confirm") {
+                    TextField("ERASE", text: $confirmation)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled()
+                        .accessibilityLabel("Type ERASE to confirm permanent deletion")
+                    Button("Permanently erase local data", role: .destructive, action: confirm)
+                        .disabled(confirmation != "ERASE")
+                }
+            }
+            .navigationTitle("Erase Local Data")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel", action: cancel) } }
         }
     }
 }
